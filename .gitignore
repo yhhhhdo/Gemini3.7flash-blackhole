@@ -1,0 +1,22 @@
+# Temporary Backup Files
+*.backup
+*.bak
+*.tmp
+scratch/
+
+# System & OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor & IDE Directories
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Early Drafts / Local Helpers (Only retain main project + standalone Kerr version)
+blackhole.html
+blackhole_3d.html
+start.bat
+

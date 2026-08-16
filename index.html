@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KERR // 克尔旋转黑洞相对论时空可视化系统</title>
+  <meta name="description" content="基于 WebGL / GLSL 真实相对论光线步进模拟的克尔黑洞 3D 可视化系统。包含引力透镜、多普勒红蓝移、吸积盘、相对论喷流及伴星潮汐撕裂流。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 3D WebGL Canvas 视口 -->
+  <div id="canvas-container">
+    <canvas id="gl-canvas"></canvas>
+  </div>
+
+  <!-- HUD 顶部状态栏 -->
+  <header id="hud-header" class="hud-panel">
+    <div class="hud-branding">
+      <div class="hud-pulse-ring"></div>
+      <div class="hud-title-group">
+        <h1 class="hud-title">KERR-METRIC // 时空引擎</h1>
+        <span class="hud-subtitle">RELATIVISTIC KERR BLACK HOLE ASTROPHYSICS</span>
+      </div>
+    </div>
+    
+    <div class="hud-telemetry">
+      <div class="telemetry-item">
+        <span class="label">FPS</span>
+        <span class="value" id="val-fps">60</span>
+      </div>
+      <div class="telemetry-item">
+        <span class="label">视界半径 r+</span>
+        <span class="value" id="val-rplus">1.34 M</span>
+      </div>
+      <div class="telemetry-item">
+        <span class="label">能层边界 rE</span>
+        <span class="value" id="val-rerg">2.00 M</span>
+      </div>
+      <div class="telemetry-item">
+        <span class="label">自旋角动量 a*</span>
+        <span class="value accent" id="val-spin-disp">+0.940</span>
+      </div>
+      <div class="telemetry-item">
+        <span class="label">多普勒频移 δ</span>
+        <span class="value" id="val-doppler-disp">Active</span>
+      </div>
+      <div class="telemetry-item">
+        <span class="label">相机距离 r</span>
+        <span class="value" id="val-cam-dist">14.0 M</span>
+      </div>
+      <div class="telemetry-item">
+        <span class="label">时间膨胀 γ</span>
+        <span class="value accent" id="val-time-dilation">1.08×</span>
+      </div>
+    </div>
+
+    <div class="hud-actions">
+      <button id="btn-export-4k" class="btn-icon" title="一键导出 4K 超清壁纸 (Snapshot PNG)">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+          <circle cx="12" cy="13" r="4"></circle>
+        </svg>
+      </button>
+      <button id="btn-audio-toggle" class="btn-icon" title="切换深空宇宙音效 (Audio Synth)">
+        <svg id="icon-sound-on" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        </svg>
+        <svg id="icon-sound-off" class="icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <line x1="23" y1="9" x2="17" y2="15"></line>
+          <line x1="17" y1="9" x2="23" y2="15"></line>
+        </svg>
+      </button>
+      <button id="btn-fullscreen" class="btn-icon" title="全屏显示 (F)">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+      </button>
+      <button id="btn-hide-hud" class="btn-icon" title="隐藏所有界面 / 壁纸模式 (H)">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+          <line x1="1" y1="1" x2="23" y2="23"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- 右侧悬浮控制面板 -->
+  <aside id="hud-sidebar" class="hud-panel">
+    <div class="sidebar-header">
+      <div class="sidebar-title">
+        <span class="title-decor"></span>
+        <span>控制中枢 // CONTROLS</span>
+      </div>
+      <button id="btn-collapse-sidebar" class="btn-text-toggle" title="折叠面板">
+        <span>收起</span>
+        <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <div class="sidebar-content">
+      <!-- 模块 1: 物理效应独立开关 -->
+      <section class="control-group">
+        <div class="group-title">
+          <span class="group-badge">MODULAR SWITCHES</span>
+          <span>结构与物理开关</span>
+        </div>
+
+        <div class="switch-grid">
+          <!-- 吸积盘开关 -->
+          <label class="switch-card" for="toggle-disk">
+            <input type="checkbox" id="toggle-disk" checked>
+            <div class="switch-box">
+              <span class="switch-icon">🌀</span>
+              <div class="switch-info">
+                <span class="switch-name">吸积盘</span>
+                <span class="switch-desc">Accretion Disk</span>
+              </div>
+              <div class="switch-indicator"></div>
+            </div>
+          </label>
+
+          <!-- 相对论喷流开关 -->
+          <label class="switch-card" for="toggle-jets">
+            <input type="checkbox" id="toggle-jets">
+            <div class="switch-box">
+              <span class="switch-icon">⚡</span>
+              <div class="switch-info">
+                <span class="switch-name">相对论极向喷流</span>
+                <span class="switch-desc">Relativistic Jets</span>
+              </div>
+              <div class="switch-indicator"></div>
+            </div>
+          </label>
+
+          <!-- 引力透镜开关 -->
+          <label class="switch-card" for="toggle-lensing">
+            <input type="checkbox" id="toggle-lensing" checked>
+            <div class="switch-box">
+              <span class="switch-icon">🌌</span>
+              <div class="switch-info">
+                <span class="switch-name">引力透镜弯曲</span>
+                <span class="switch-desc">Gravitational Lensing</span>
+              </div>
+              <div class="switch-indicator"></div>
+            </div>
+          </label>
+
+          <!-- 多普勒红蓝移开关 -->
+          <label class="switch-card" for="toggle-doppler">
+            <input type="checkbox" id="toggle-doppler" checked>
+            <div class="switch-box">
+              <span class="switch-icon">🔴</span>
+              <div class="switch-info">
+                <span class="switch-name">相对论多普勒效应</span>
+                <span class="switch-desc">Doppler Beaming</span>
+              </div>
+              <div class="switch-indicator"></div>
+            </div>
+          </label>
+
+          <!-- 伴星潮汐撕裂流开关 -->
+          <label class="switch-card" for="toggle-tde">
+            <input type="checkbox" id="toggle-tde">
+            <div class="switch-box">
+              <span class="switch-icon">☄️</span>
+              <div class="switch-info">
+                <span class="switch-name">伴星潮汐撕裂流</span>
+                <span class="switch-desc">Tidal Disruption (TDE)</span>
+              </div>
+              <div class="switch-indicator"></div>
+            </div>
+          </label>
+
+          <!-- 吸积盘相对论热斑开关 -->
+          <label class="switch-card" for="toggle-hotspot">
+            <input type="checkbox" id="toggle-hotspot">
+            <div class="switch-box">
+              <span class="switch-icon">🔥</span>
+              <div class="switch-info">
+                <span class="switch-name">吸积盘热斑耀斑</span>
+                <span class="switch-desc">Relativistic Hot Spot</span>
+              </div>
+              <div class="switch-indicator"></div>
+            </div>
+          </label>
+
+          <!-- 引力波时空涟漪开关与激发按键 -->
+          <label class="switch-card" for="toggle-gw">
+            <input type="checkbox" id="toggle-gw">
+            <div class="switch-box">
+              <span class="switch-icon">🌊</span>
+              <div class="switch-info">
+                <span class="switch-name">引力波时空涟漪</span>
+                <span class="switch-desc">GW Metric Ripples</span>
+              </div>
+              <div class="switch-indicator"></div>
+            </div>
+          </label>
+
+          <!-- 能层与视界线框开关 -->
+          <label class="switch-card" for="toggle-grid">
+            <input type="checkbox" id="toggle-grid">
+            <div class="switch-box">
+              <span class="switch-icon">🌐</span>
+              <div class="switch-info">
+                <span class="switch-name">能层与视界线框</span>
+                <span class="switch-desc">Ergosphere Grid</span>
+              </div>
+              <div class="switch-indicator"></div>
+            </div>
+          </label>
+
+          <!-- 流浪黑洞宇宙巡航模式 -->
+          <label class="switch-card" for="toggle-cruise">
+            <input type="checkbox" id="toggle-cruise">
+            <div class="switch-box">
+              <span class="switch-icon">🚀</span>
+              <div class="switch-info">
+                <span class="switch-name">流浪黑洞宇宙巡航</span>
+                <span class="switch-desc">Rogue Cosmic Cruise</span>
+              </div>
+              <div class="switch-indicator"></div>
+            </div>
+          </label>
+
+          <!-- 邦迪-霍伊尔引力激波尾流 -->
+          <label class="switch-card" for="toggle-wake">
+            <input type="checkbox" id="toggle-wake">
+            <div class="switch-box">
+              <span class="switch-icon">☄️</span>
+              <div class="switch-info">
+                <span class="switch-name">邦迪-霍伊尔引力尾流</span>
+                <span class="switch-desc">Bondi-Hoyle Wake</span>
+              </div>
+              <div class="switch-indicator"></div>
+            </div>
+          </label>
+
+          <!-- HDR 辉光与光学后处理 -->
+          <label class="switch-card" for="toggle-bloom">
+            <input type="checkbox" id="toggle-bloom" checked>
+            <div class="switch-box">
+              <span class="switch-icon">✨</span>
+              <div class="switch-info">
+                <span class="switch-name">HDR 辉光泛光</span>
+                <span class="switch-desc">Bloom & Glow</span>
+              </div>
+              <div class="switch-indicator"></div>
+            </div>
+          </label>
+
+          <!-- 宽银幕变形镜头光晕 -->
+          <label class="switch-card" for="toggle-cinematic-flare">
+            <input type="checkbox" id="toggle-cinematic-flare" checked>
+            <div class="switch-box">
+              <span class="switch-icon">🎬</span>
+              <div class="switch-info">
+                <span class="switch-name">宽银幕变形光斑</span>
+                <span class="switch-desc">Anamorphic Flare</span>
+              </div>
+              <div class="switch-indicator"></div>
+            </div>
+          </label>
+
+          <!-- 时空微引力光学色散 -->
+          <label class="switch-card" for="toggle-dispersion">
+            <input type="checkbox" id="toggle-dispersion" checked>
+            <div class="switch-box">
+              <span class="switch-icon">🌈</span>
+              <div class="switch-info">
+                <span class="switch-name">时空引力微色散</span>
+                <span class="switch-desc">Grav Dispersion</span>
+              </div>
+              <div class="switch-indicator"></div>
+            </div>
+          </label>
+        </div>
+
+        <!-- 激发 LIGO 引力波啁啾脉冲按钮 -->
+        <button id="btn-gw-burst" class="btn-secondary" style="margin-top: 10px; width: 100%; border: 1px solid rgba(0,210,255,0.4); background: rgba(0,210,255,0.08); color: #00e5ff;">
+          <span>🌊 激发 LIGO 引力波脉冲 (Chirp)</span>
+        </button>
+      </section>
+
+      <!-- 模块 1.5: 著名黑洞天体预设 (Astrophysical Profiles) -->
+      <section class="control-group">
+        <div class="group-title">
+          <span class="group-badge">CELESTIAL PRESETS</span>
+          <span>著名真实黑洞档案</span>
+        </div>
+        <div class="astro-preset-grid">
+          <button class="btn-astro-preset active" data-astro="gargantua">
+            <span class="astro-name">卡冈图雅</span>
+            <span class="astro-sub">Gargantua · $a^*=0.998$</span>
+          </button>
+          <button class="btn-astro-preset" data-astro="m87">
+            <span class="astro-name">M87* 巨型黑洞</span>
+            <span class="astro-sub">EHT 原型 · 超强喷流</span>
+          </button>
+          <button class="btn-astro-preset" data-astro="sgra">
+            <span class="astro-name">银心人马座 A*</span>
+            <span class="astro-sub">Sgr A* · 快速热斑</span>
+          </button>
+          <button class="btn-astro-preset" data-astro="micro">
+            <span class="astro-name">原初微型黑洞</span>
+            <span class="astro-sub">Micro Hole · 霍金辐射</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 模块 2: 天体物理参数滑块 -->
+      <section class="control-group">
+        <div class="group-title">
+          <span class="group-badge">PHYSICS PARAMS</span>
+          <span>相对论天体参数</span>
+        </div>
+
+        <!-- 自旋 a/M -->
+        <div class="slider-control">
+          <div class="slider-header">
+            <span class="slider-label">自旋角动量 (Spin $a/M$)</span>
+            <span class="slider-value" id="disp-spin">+0.301</span>
+          </div>
+          <input type="range" id="param-spin" min="-0.999" max="0.999" step="0.001" value="0.301">
+          <div class="slider-ticks">
+            <span>-0.99 (逆行)</span>
+            <span>0.00 (史瓦西)</span>
+            <span>+0.99 (极端克尔)</span>
+          </div>
+        </div>
+
+        <!-- 黑洞质量 M -->
+        <div class="slider-control">
+          <div class="slider-header">
+            <span class="slider-label">黑洞质量尺度 (Mass $M$)</span>
+            <span class="slider-value" id="disp-mass">0.50</span>
+          </div>
+          <input type="range" id="param-mass" min="0.5" max="2.5" step="0.05" value="0.50">
+        </div>
+
+        <!-- 吸积盘温度/色温 -->
+        <div class="slider-control">
+          <div class="slider-header">
+            <span class="slider-label">吸积盘炽热温度 (Temperature)</span>
+            <span class="slider-value" id="disp-temp">3000 K</span>
+          </div>
+          <input type="range" id="param-temp" min="3000" max="18000" step="200" value="3000">
+        </div>
+
+        <!-- 吸积盘密度/厚度 -->
+        <div class="slider-control">
+          <div class="slider-header">
+            <span class="slider-label">吸积流气体密度 (Density)</span>
+            <span class="slider-value" id="disp-density">0.20</span>
+          </div>
+          <input type="range" id="param-density" min="0.2" max="3.0" step="0.1" value="0.20">
+        </div>
+
+        <!-- 极向喷流强度 -->
+        <div class="slider-control">
+          <div class="slider-header">
+            <span class="slider-label">喷流等离子体能量 (Jet Power)</span>
+            <span class="slider-value" id="disp-jet-power">4.00</span>
+          </div>
+          <input type="range" id="param-jet-power" min="0.0" max="4.0" step="0.1" value="4.00">
+        </div>
+
+        <!-- 时间流速 -->
+        <div class="slider-control">
+          <div class="slider-header">
+            <span class="slider-label">时空演化速率 (Time Rate)</span>
+            <span class="slider-value" id="disp-time-rate">2.00x</span>
+          </div>
+          <input type="range" id="param-time-rate" min="0.0" max="3.0" step="0.1" value="2.00">
+        </div>
+
+        <!-- 巡航漂移速度 -->
+        <div class="slider-control">
+          <div class="slider-header">
+            <span class="slider-label">深空巡航速度 (Cruise Speed)</span>
+            <span class="slider-value" id="disp-cruise-speed">1.00x</span>
+          </div>
+          <input type="range" id="param-cruise-speed" min="0.1" max="3.0" step="0.1" value="1.00">
+        </div>
+
+        <!-- 引力尾流强度 -->
+        <div class="slider-control">
+          <div class="slider-header">
+            <span class="slider-label">引力尾流等离子体强度 (Wake Power)</span>
+            <span class="slider-value" id="disp-wake-power">1.50</span>
+          </div>
+          <input type="range" id="param-wake-power" min="0.2" max="4.0" step="0.1" value="1.50">
+        </div>
+
+        <!-- 采样精度与性能 -->
+        <div class="slider-control">
+          <div class="slider-header">
+            <span class="slider-label">光线步进采样精度 (Raymarch Quality)</span>
+            <span class="slider-value" id="disp-quality">电影 4K (260)</span>
+          </div>
+          <input type="range" id="param-quality" min="1" max="5" step="1" value="4">
+          <div class="slider-ticks">
+            <span>标准</span>
+            <span>高画质</span>
+            <span>极致</span>
+            <span>电影 4K</span>
+            <span>IMAX 8K</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 重置与操作 -->
+      <div class="control-actions">
+        <button id="btn-reset-params" class="btn-secondary">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
+          <span>重置为推荐物理参数</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 侧边栏折叠后的唤起浮钮 -->
+  <button id="btn-open-sidebar" class="btn-floating-hub hidden" title="展开控制面板">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+    <span>参数面板</span>
+  </button>
+
+  <!-- 底部经典运镜预设栏 (Camera Presets Dock) -->
+  <footer id="hud-footer" class="hud-panel">
+    <div class="preset-dock-title">
+      <span class="dock-indicator"></span>
+      <span>观测机位 // CAMERA PRESETS</span>
+    </div>
+
+    <div class="preset-buttons">
+      <button class="btn-preset active" data-preset="equatorial">
+        <span class="preset-badge">01</span>
+        <span class="preset-name">赤道轨道环游</span>
+        <span class="preset-sub">Equatorial</span>
+      </button>
+
+      <button class="btn-preset" data-preset="polar">
+        <span class="preset-badge">02</span>
+        <span class="preset-name">极顶喷流俯瞰</span>
+        <span class="preset-sub">Polar Jets</span>
+      </button>
+
+      <button class="btn-preset" data-preset="interstellar">
+        <span class="preset-badge">03</span>
+        <span class="preset-name">星际穿越经典</span>
+        <span class="preset-sub">Interstellar</span>
+      </button>
+
+      <button class="btn-preset" data-preset="tde-focus">
+        <span class="preset-badge">04</span>
+        <span class="preset-name">伴星潮汐撕裂</span>
+        <span class="preset-sub">TDE Stream</span>
+      </button>
+
+      <button class="btn-preset btn-dive" data-preset="dive">
+        <span class="preset-badge">🔥</span>
+        <span class="preset-name">坠入事件视界</span>
+        <span class="preset-sub">Singularity Dive</span>
+      </button>
+    </div>
+
+    <div class="dock-quick-hints">
+      <span>🖱️ 鼠标拖拽 360° 旋转</span>
+      <span>滚轮平滑缩放</span>
+      <span>按 <kbd>H</kbd> 沉浸全屏</span>
+      <span>按 <kbd>空格</kbd> 暂停演化</span>
+    </div>
+  </footer>
+
+  <!-- 隐藏 HUD 后的唤醒悬浮提示 -->
+  <div id="hud-wakeup-hint" class="hidden">
+    按 <kbd>H</kbd> 或任意点击唤醒控制中枢
+  </div>
+
+  <!-- 坠入视界警报覆盖层 -->
+  <div id="dive-warning-overlay" class="hidden">
+    <div class="warning-box">
+      <div class="warning-header">⚠️ WARNING: CROSSING EVENT HORIZON ⚠️</div>
+      <div class="warning-text">已突破最内稳定圆轨道 (ISCO)，引力潮汐力无限发散中...</div>
+      <button id="btn-abort-dive" class="btn-abort">脱离黑洞视界 (RESCUE ORBIT)</button>
+    </div>
+  </div>
+
+  <!-- 引入 Three.js 核心及应用脚本 (ES Modules) -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kerr Black Hole · 克尔旋转黑洞相对论可视化</title>
+<style>
+  :root {
+    --glass: rgba(12, 16, 28, 0.55);
+    --border: rgba(255,255,255,0.12);
+    --text: #dfe6f5;
+    --cyan: #6ef0ff;
+    --orange: #ffb066;
+    --red: #ff5a5a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+  }
+  canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+  canvas:active { cursor: grabbing; }
+
+  /* Top telemetry */
+  .telemetry {
+    position: fixed;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 18px;
+    padding: 8px 18px;
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    z-index: 20;
+    white-space: nowrap;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+  .telemetry b { color: var(--cyan); font-weight: 600; }
+  .telemetry .warn { color: var(--red); text-shadow: 0 0 8px rgba(255,80,80,0.8); }
+
+  /* Glass HUD */
+  .hud {
+    position: fixed;
+    top: 80px;
+    left: 16px;
+    width: 280px;
+    max-height: calc(100% - 110px);
+    overflow-y: auto;
+    background: var(--glass);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 16px;
+    z-index: 20;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    user-select: none;
+  }
+  .hud h1 {
+    font-size: 17px;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, var(--orange), var(--cyan));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 2px;
+  }
+  .hud .sub {
+    font-size: 11px;
+    opacity: 0.5;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+  }
+  .control { margin-bottom: 10px; }
+  .control label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 4px;
+    opacity: 0.85;
+  }
+  .control output { font-weight: 600; color: var(--cyan); }
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(110,240,255,.5), rgba(255,176,102,.5));
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--cyan);
+    box-shadow: 0 0 10px rgba(110,240,255,.7);
+    cursor: pointer;
+  }
+  .btn-row { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+  .btn {
+    flex: 1;
+    min-width: 70px;
+    padding: 8px 6px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all .2s;
+  }
+  .btn:hover { background: rgba(255,255,255,0.16); border-color: var(--cyan); }
+  .hint {
+    margin-top: 10px;
+    font-size: 11px;
+    line-height: 1.7;
+    opacity: 0.5;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 8px;
+  }
+  .badge {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    font-size: 11px;
+    opacity: 0.35;
+    letter-spacing: 1px;
+    z-index: 20;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+
+<!-- Telemetry -->
+<div class="telemetry">
+  <span>FPS <b id="fps">60</b></span>
+  <span>r+ <b id="rh">1.000</b></span>
+  <span>能层 <b id="erg">2.000</b></span>
+  <span>a* <b id="tSpin">0.000</b></span>
+  <span>r/M <b id="tDist">16.0</b></span>
+  <span>γ_t <b id="gamma">1.000</b></span>
+</div>
+
+<!-- HUD -->
+<div class="hud">
+  <h1>KERR BLACK HOLE</h1>
+  <div class="sub">广义相对论光线步进 · RK2 · 卡冈图雅风格</div>
+
+  <div class="control">
+    <label>黑洞自旋 a* <output id="spinVal">0.00</output></label>
+    <input type="range" id="spin" min="-0.999" max="0.999" step="0.001" value="0.0">
+  </div>
+  <div class="control">
+    <label>黑洞质量 M <output id="massVal">1.00</output></label>
+    <input type="range" id="mass" min="0.5" max="3.0" step="0.01" value="1.0">
+  </div>
+  <div class="control">
+    <label>吸积盘温度 <output id="tempVal">1.00</output></label>
+    <input type="range" id="temp" min="0.3" max="2.5" step="0.01" value="1.0">
+  </div>
+  <div class="control">
+    <label>等离子体密度 <output id="densVal">1.00</output></label>
+    <input type="range" id="dens" min="0.2" max="3.0" step="0.01" value="1.0">
+  </div>
+  <div class="control">
+    <label>模拟流速 <output id="flowVal">1.00</output></label>
+    <input type="range" id="flow" min="0.0" max="3.0" step="0.01" value="1.0">
+  </div>
+  <div class="control">
+    <label>画质步数 <output id="stepsVal">192</output></label>
+    <input type="range" id="steps" min="64" max="512" step="32" value="192">
+  </div>
+  <div class="control">
+    <label>视角俯仰 <output id="pitchVal">30°</output></label>
+    <input type="range" id="pitch" min="-85" max="85" step="1" value="30">
+  </div>
+  <div class="control">
+    <label>视角方位 <output id="yawVal">0°</output></label>
+    <input type="range" id="yaw" min="-180" max="180" step="1" value="0">
+  </div>
+  <div class="control">
+    <label>观察距离 <output id="distVal">16.0</output></label>
+    <input type="range" id="dist" min="4.0" max="40" step="0.1" value="16.0">
+  </div>
+
+  <div class="control" style="margin-top: 14px;">
+    <label>著名黑洞档案</label>
+    <div class="btn-row">
+      <button class="btn astro-btn active" data-astro="gargantua" style="font-size: 11px;">卡冈图雅</button>
+      <button class="btn astro-btn" data-astro="m87" style="font-size: 11px;">M87*</button>
+      <button class="btn astro-btn" data-astro="sgra" style="font-size: 11px;">人马座 A*</button>
+      <button class="btn astro-btn" data-astro="micro" style="font-size: 11px;">微型黑洞</button>
+    </div>
+  </div>
+
+  <div class="btn-row" style="margin-top: 10px;">
+    <button class="btn" id="resetView">重置视角</button>
+    <button class="btn" id="diveBtn">视界俯冲</button>
+    <button class="btn" id="snapBtn" title="导出当前画面为 4K 超清壁纸">4K 截图</button>
+    <button class="btn" id="gwBtn" style="color: #00e5ff;" title="触发 LIGO 引力波时空涟漪与啁啾音效">🌊 引力波</button>
+  </div>
+  <div class="btn-row" style="margin-top: 6px;">
+    <button class="btn" id="cruiseBtn" style="color: #ffaa00;" title="启动流浪黑洞宇宙深空巡航">🚀 宇宙巡航</button>
+    <button class="btn" id="wakeBtn" style="color: #ff6633;" title="开启邦迪-霍伊尔引力激波尾流">☄️ 尾流</button>
+    <button class="btn" id="tdeBtn" style="color: #ffcc00;" title="切换伴星潮汐撕裂吸积流">🌟 伴星撕裂</button>
+  </div>
+
+  <div class="hint">
+    🖱 拖拽环绕 · 滚轮缩放<br>
+    ⚙ 全参数实时调节 · 全屏抗锯齿
+  </div>
+</div>
+
+<div class="badge">KERR-RAYMARCH · RK2 · ACES · BLOOM</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("scene");
+  const gl = canvas.getContext("webgl", { antialias: true, alpha: false });
+  if (!gl) {
+    document.body.innerHTML = '<div style="color:#fff;padding:40px;font-size:20px">需要 WebGL 支持。</div>';
+    return;
+  }
+
+  const vertSrc = `
+    attribute vec2 aPos;
+    void main() {
+      gl_Position = vec4(aPos, 0.0, 1.0);
+    }
+  `;
+
+  const fragSrc = `
+    precision highp float;
+
+    uniform vec2 uResolution;
+    uniform float uTime;
+    uniform float uSpin;
+    uniform float uMass;
+    uniform float uTemp;
+    uniform float uDensity;
+    uniform float uFlow;
+    uniform float uSteps;
+    uniform float uPitch;
+    uniform float uYaw;
+    uniform float uDist;
+    uniform float uGWBurst;
+    uniform float uEnableWake;
+    uniform float uEnableTDE;
+    uniform vec3 uBlackHolePos;
+    uniform vec3 uBlackHoleVel;
+
+    const float PI = 3.141592653589793;
+    const float FAR = 120.0;
+    const int MAX_STEPS = 512;
+
+    // ---------- Random / Noise ----------
+    float hash12(vec2 p) {
+      vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+      p3 += dot(p3, p3.yzx + 33.33);
+      return fract((p3.x + p3.y) * p3.z);
+    }
+
+    float noise(vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      f = f * f * (3.0 - 2.0 * f);
+      float a = hash12(i);
+      float b = hash12(i + vec2(1.0, 0.0));
+      float c = hash12(i + vec2(0.0, 1.0));
+      float d = hash12(i + vec2(1.0, 1.0));
+      return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+    }
+
+    float fbm(vec2 p) {
+      float v = 0.0;
+      float amp = 0.5;
+      for (int i = 0; i < 5; i++) {
+        v += amp * noise(p);
+        p *= 2.03;
+        amp *= 0.5;
+      }
+      return v;
+    }
+
+    // ---------- Blackbody ----------
+    vec3 blackbody(float T) {
+      T = clamp(T, 1000.0, 40000.0);
+      float t = T / 100.0;
+      float r, g, b;
+      if (t <= 66.0) {
+        r = 255.0;
+        g = 99.4708025861 * log(t) - 161.1195681661;
+        if (t <= 19.0) b = 0.0;
+        else b = 138.5177312231 * log(t - 10.0) - 305.0447927307;
+      } else {
+        r = 329.698727446 * pow(t - 60.0, -0.1332047592);
+        g = 288.1221695283 * pow(t - 60.0, -0.0755148492);
+        b = 255.0;
+      }
+      return clamp(vec3(r, g, b) / 255.0, 0.0, 1.0);
+    }
+
+    // ---------- Kerr geometry ----------
+    float horizon(float M, float a) {
+      return M + sqrt(max(M*M - a*a, 0.0));
+    }
+    float ergosphere(float M, float a) {
+      return 2.0 * M;
+    }
+    float isco(float M, float a) {
+      float am = clamp(a / M, -0.999, 0.999);
+      float Z1 = 1.0 + pow(1.0 - am*am, 1.0/3.0) *
+                 (pow(1.0 + am, 1.0/3.0) + pow(1.0 - am, 1.0/3.0));
+      float Z2 = sqrt(max(3.0*am*am + Z1*Z1, 0.0));
+      float r = M * (3.0 + Z2 - sqrt(max((3.0 - Z1) * (3.0 + Z1 + 2.0*Z2), 0.0)));
+      return r;
+    }
+    float photonSphere(float M, float a) {
+      float am = clamp(a / M, -0.999, 0.999);
+      return M * (2.0 * (1.0 + cos((2.0/3.0) * acos(-am))));
+    }
+
+    // ---------- Kerr acceleration (RK2 uses this) ----------
+    vec3 acc(vec3 p, vec3 v, float M, float a) {
+      float r = length(p);
+      float r2 = r * r;
+      float r4 = r2 * r2;
+      float r5 = r4 * r;
+      vec3 L = cross(p, v);
+      float L2 = dot(L, L);
+      vec3 a_grav = -(1.5 * M * L2 / r5) * p;
+      vec3 a_drag = vec3(-p.z, 0.0, p.x) * (2.0 * M * a / r4);
+
+      // 引力波四极矩扰动
+      vec3 a_gw = vec3(0.0);
+      if (uGWBurst > 0.001) {
+        float phi = atan(p.z, p.x);
+        float gwPhase = 2.4 * r - 4.5 * uTime + 2.0 * phi;
+        float gwQuad = sin(gwPhase) * (1.0 - pow(p.y / max(r, 0.01), 2.0)) * exp(-r / (14.0 * M));
+        a_gw = vec3(cos(phi) * gwQuad, -sin(gwPhase * 0.5) * gwQuad * 0.5, sin(phi) * gwQuad) * (uGWBurst * 0.35);
+      }
+
+      return a_grav + a_drag + a_gw;
+    }
+
+    // ---------- Disk emission (Smooth Continuous Boundary) ----------
+    vec3 diskEmission(vec3 p, vec3 v, float M, float a, float rI, float rO, float r) {
+      float rr = length(p.xz);
+      if (rr < rI * 0.98 || rr > rO * 1.02) return vec3(0.0);
+
+      float T = 38000.0 * uTemp * pow(rI / rr, 0.5);
+      vec3 base = blackbody(T);
+
+      // Orbital velocity (prograde)
+      float beta = sqrt(M / rr) / max(1.0 + a * sqrt(M / (rr*rr*rr)), 0.1);
+      beta = clamp(beta, 0.0, 0.9);
+      vec3 tangent = normalize(vec3(-p.z, 0.0, p.x));
+      vec3 toCam = normalize(-v);
+      float cosAng = dot(toCam, tangent);
+      float gamma = 1.0 / sqrt(max(1.0 - beta*beta, 0.001));
+      float doppler = 1.0 / max(gamma * (1.0 - beta * cosAng), 0.05);
+
+      float gravRed = sqrt(max(1.0 - 2.0*M/rr, 0.0));
+      float intensity = pow(max(doppler, 0.0), 3.5) * gravRed;
+
+      // 真实相对论差动旋转 (Differential Keplerian Flow)
+      float omega = (sqrt(M) / (pow(rr, 1.5) + a * sqrt(M))) * (a >= 0.0 ? 1.0 : -1.0);
+      float phi = atan(p.z, p.x);
+      float shearPhase = phi - omega * uTime * uFlow * 2.2;
+
+      // 极坐标开普勒微结构扰动 (微湍流打破单一螺旋规律感)
+      float turb = fbm(vec2(rr * cos(shearPhase) * 0.8, rr * sin(shearPhase) * 0.8));
+      float logR_distorted = log(rr) * 20.0 + turb * 1.8;
+
+      // 超细腻复合高频同心流线 (Ultra-dense Multi-harmonic Filaments)
+      float s1 = sin(shearPhase * 8.0 + logR_distorted);
+      float s2 = sin(shearPhase * 18.0 - logR_distorted * 1.5 + 1.3);
+      float s3 = sin(shearPhase * 36.0 + logR_distorted * 2.6 + 2.7);
+
+      float streak = 0.50 * s1 + 0.32 * s2 + 0.18 * s3;
+      streak = 0.5 + 0.5 * streak;
+
+      float pattern = 0.55 + 0.25 * turb + 0.45 * pow(streak, 1.4);
+
+      // 边缘平滑羽化 (消除硬边界百叶窗阶梯)
+      float outerFade = smoothstep(rO, rO * 0.70, rr);
+      float innerFade = smoothstep(rI * 0.98, rI * 1.10, rr);
+      float edgeMask = outerFade * innerFade;
+
+      vec3 col = base * intensity * pattern * uDensity * edgeMask;
+
+      // Relativistic Hot Spot Flare
+      float rSpot = rI * 1.35;
+      float omegaSpot = sqrt(M / (rSpot*rSpot*rSpot)) * (a >= 0.0 ? 1.0 : -1.0);
+      float phiSpot = omegaSpot * uTime * 2.5;
+      vec2 spotPos = vec2(cos(phiSpot), sin(phiSpot)) * rSpot;
+      float dSpot = length(p.xz - spotPos);
+      float spotGlow = exp(-pow(dSpot / (0.45 * M), 2.0));
+      col += vec3(1.2, 1.6, 2.5) * spotGlow * 12.0 * intensity * edgeMask;
+
+      return col;
+    }
+
+    // ---------- Bondi-Hoyle Gravitational Wake ----------
+    vec4 sampleBondiHoyleWake(vec3 pLocal, vec3 velBH, float M) {
+      if (uEnableWake < 0.5) return vec4(0.0);
+      float vSpeed = length(velBH);
+      if (vSpeed < 0.05) return vec4(0.0);
+      vec3 wakeAxis = -normalize(velBH);
+      float zWake = dot(pLocal, wakeAxis);
+      if (zWake < 1.2 * M || zWake > 38.0 * M) return vec4(0.0);
+      vec3 pPerp = pLocal - zWake * wakeAxis;
+      float rPerp = length(pPerp);
+      float shockRadius = (0.45 * M + 0.24 * sqrt(zWake * M)) * (1.0 + 0.35 / (vSpeed + 0.2));
+      if (rPerp > shockRadius * 2.5) return vec4(0.0);
+      float radialGauss = exp(-pow(rPerp / shockRadius, 2.0));
+      float axialFalloff = 1.0 / sqrt(1.0 + zWake / (3.5 * M));
+      float nearFade = smoothstep(1.2 * M, 3.2 * M, zWake);
+      float wakeTurb = fbm(vec2(pLocal.x * 0.45, pLocal.z * 0.45 - uTime * 1.5)) * 0.4 + 0.8;
+      float density = radialGauss * axialFalloff * nearFade * wakeTurb * 2.8;
+      float tNorm = clamp(1.0 - zWake / (35.0 * M), 0.0, 1.0);
+      vec3 hotShockCol = vec3(0.3, 0.85, 1.3) * 3.8;
+      vec3 coolTailCol = vec3(1.4, 0.55, 0.18) * 2.2;
+      vec3 wakeCol = mix(coolTailCol, hotShockCol, pow(tNorm, 1.5));
+      return vec4(wakeCol, density);
+    }
+
+    // ---------- Tidal Disruption Event (TDE) Multi-Filament Infalling Stream ----------
+    vec4 sampleTDE(vec3 pos, vec3 rayDir, float M, float isco) {
+      if (uEnableTDE < 0.5) return vec4(0.0);
+      float r = length(pos.xz);
+      float rComp = 13.5 * M;
+
+      // 伴星水滴潮汐形变 (完全自包含高斯衰减，绝对无硬边界截断)
+      float starAngle = uTime * 0.35;
+      vec3 starPos = vec3(cos(starAngle) * rComp, 0.45 * sin(starAngle * 0.6), sin(starAngle) * rComp);
+      vec3 dStarVec = pos - starPos;
+      vec3 starToCenter = normalize(-starPos);
+      float radProj = dot(dStarVec, starToCenter);
+      vec3 perpVec = dStarVec - radProj * starToCenter;
+      float deformedDistSq = pow(radProj * 0.6, 2.0) + dot(perpVec, perpVec) * 1.5;
+      
+      float starCore = exp(-deformedDistSq / (0.28 * M * M));
+      float starCorona = exp(-sqrt(deformedDistSq) / (0.55 * M)) * 0.4;
+      vec3 starCol = vec3(1.6, 1.1, 0.6) * (starCore * 5.5 + starCorona * 1.5);
+      float starDensity = starCore * 3.5 + starCorona * 0.8;
+
+      // 相对论多丝螺旋撕裂吸积带
+      float phi = atan(pos.z, pos.x);
+      float deltaR = max(rComp - r, 0.0);
+      float winding = 1.35 * pow(deltaR / M, 0.92);
+      float phiDiff = mod(phi - (starAngle - winding) + PI, 2.0 * PI) - PI;
+      float yStream = 0.45 * sin(starAngle - 0.85 * (deltaR / M)) * pow(r / rComp, 0.7);
+
+      float streamThickness = (0.22 * M + 0.55 * M * (r / rComp));
+      float streamHeight = (0.16 * M + 0.42 * M * (r / rComp));
+      float distTang = abs(phiDiff) * r;
+      float distVert = abs(pos.y - yStream);
+
+      // 多股平滑分叉流纹 (Anti-Aliased Fluid Filaments)
+      float streamPhase = winding * 3.0 - uTime * 2.8;
+      float strandNoise = fbm(vec2(pos.x * 0.8 + pos.z * 0.5, pos.y * 1.5 + streamPhase));
+      float strand1 = sin(distTang * 4.2 / max(streamThickness, 0.15 * M) + strandNoise * 1.2);
+      float strand2 = cos(distVert * 4.8 / max(streamHeight, 0.12 * M) - strandNoise * 0.8);
+      float internalTexture = 0.68 + 0.18 * strand1 + 0.14 * strand2;
+
+      float streamGauss = exp(-0.5 * (pow(distTang / streamThickness, 2.0) + pow(distVert / streamHeight, 2.0)));
+      float radialMask = smoothstep(isco * 0.90, isco + 1.2 * M, r) * smoothstep(rComp + 1.8 * M, rComp, r);
+      float streamIntensity = streamGauss * internalTexture * radialMask;
+
+      // 潮汐生热渐变与自相交激波
+      float tFrac = clamp(1.0 - (r - isco) / (rComp - isco), 0.0, 1.0);
+      float localT = mix(5500.0, 36000.0, pow(tFrac, 1.6));
+      vec3 blackbodyStream = blackbody(localT);
+
+      float shockZone = exp(-pow((r - isco * 1.3) / (0.45 * M), 2.0)) * exp(-pow(phiDiff / 0.35, 2.0)) * streamGauss;
+      vec3 shockColor = vec3(0.5, 0.9, 1.5) * (shockZone * 3.5);
+
+      vec3 finalColor = starCol + (blackbodyStream * 2.6 * internalTexture + shockColor) * streamIntensity;
+      float finalDensity = starDensity + streamIntensity * 2.2 + shockZone * 1.5;
+
+      return vec4(finalColor, finalDensity);
+    }
+
+    // ---------- Pure Optical Spherical Starfield (Zero Crosses / Natural Circles) ----------
+    vec3 starfield(vec3 dir) {
+      vec3 d = normalize(dir);
+      vec3 col = vec3(0.0);
+
+      // 1. 纯净深空微光 (Deep Space Background)
+      float galPlane = exp(-abs(d.y * 3.5 + 0.1 * sin(d.x * 2.5)) * 2.2);
+      col += vec3(0.003, 0.006, 0.015) * (galPlane * 1.5 + 0.3);
+
+      // 2. 亚像素微光星尘 (Sub-pixel Micro Pinpoint Stars)
+      vec3 p1 = d * 160.0;
+      vec3 i1 = floor(p1);
+      vec3 f1 = fract(p1) - 0.5;
+      float rnd1 = fract(sin(dot(i1, vec3(12.9898, 78.233, 45.164))) * 43758.5453);
+      if (rnd1 > 0.65) {
+        vec3 j1 = (vec3(fract(rnd1 * 17.3) - 0.5, fract(rnd1 * 43.7) - 0.5, fract(rnd1 * 91.1) - 0.5)) * 0.75;
+        float dist1 = length(f1 - j1);
+        float star1 = exp(-pow(dist1 / 0.028, 2.0)) * pow(rnd1, 6.0) * 1.1;
+        vec3 col1 = mix(vec3(0.75, 0.88, 1.1), vec3(1.1, 0.95, 0.8), fract(rnd1 * 5.0));
+        col += col1 * star1;
+      }
+
+      // 3. 中等亮度恒星 (Medium Stellar Field)
+      vec3 p2 = d * 70.0;
+      vec3 i2 = floor(p2);
+      vec3 f2 = fract(p2) - 0.5;
+      float rnd2 = fract(sin(dot(i2, vec3(39.345, 11.872, 83.156))) * 43758.5453);
+      if (rnd2 > 0.82) {
+        vec3 j2 = (vec3(fract(rnd2 * 23.4) - 0.5, fract(rnd2 * 57.8) - 0.5, fract(rnd2 * 81.2) - 0.5)) * 0.7;
+        float dist2 = length(f2 - j2);
+        float star2 = exp(-pow(dist2 / 0.035, 2.0)) * pow(rnd2, 4.0) * 2.2;
+        vec3 col2 = mix(vec3(0.8, 0.92, 1.15), vec3(1.15, 0.92, 0.75), fract(rnd2 * 3.3));
+        col += col2 * star2;
+      }
+
+      // 4. 高亮主恒星 (Bright Anchor Stars - 纯净圆形高斯光晕)
+      vec3 p3 = d * 32.0;
+      vec3 i3 = floor(p3);
+      vec3 f3 = fract(p3) - 0.5;
+      float rnd3 = fract(sin(dot(i3, vec3(67.123, 91.456, 17.891))) * 43758.5453);
+      if (rnd3 > 0.92) {
+        vec3 j3 = (vec3(fract(rnd3 * 31.7) - 0.5, fract(rnd3 * 73.1) - 0.5, fract(rnd3 * 19.9) - 0.5)) * 0.65;
+        float dist3 = length(f3 - j3);
+        float core3 = exp(-pow(dist3 / 0.025, 2.0)) * 3.5;
+        float halo3 = exp(-pow(dist3 / 0.090, 2.0)) * 0.7;
+        vec3 col3 = mix(vec3(0.85, 0.95, 1.2), vec3(1.2, 0.95, 0.7), fract(rnd3 * 7.7));
+        col += col3 * (core3 + halo3);
+      }
+
+      return col;
+    }
+
+    // ---------- Ray march ----------
+    vec3 trace(vec2 uv) {
+      float yaw = uYaw * PI / 180.0;
+      float pitch = uPitch * PI / 180.0;
+      float cp = cos(pitch);
+      vec3 ro = vec3(uDist * cp * cos(yaw), uDist * sin(pitch), uDist * cp * sin(yaw));
+      vec3 target = vec3(0.0);
+      vec3 forward = normalize(target - ro);
+      vec3 worldUp = abs(forward.y) > 0.99 ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
+      vec3 right = normalize(cross(forward, worldUp));
+      vec3 up = cross(right, forward);
+      vec3 rd = normalize(forward + uv.x * right + uv.y * up);
+
+      float M = uMass;
+      float a = uSpin * M;
+      float rH = horizon(M, a);
+      float rI = isco(M, a);
+      float rO = rI + 10.0 * M;
+      float rPh = photonSphere(M, a);
+
+      // 屏幕空间微抖动反走样 (Sub-pixel Ray Jitter Anti-banding)
+      float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+      vec3 p = ro + rd * (dither * 0.04);
+      vec3 v = rd;
+      float minR = 1e3;
+      vec3 col = vec3(0.0);
+      vec3 volCol = vec3(0.0);
+      bool swallowed = false;
+
+      int steps = int(uSteps);
+      if (steps > MAX_STEPS) steps = MAX_STEPS; if (steps < 1) steps = 1;
+
+      for (int i = 0; i < MAX_STEPS; i++) {
+        if (i >= steps) break;
+        vec3 pRel = p - uBlackHolePos;
+        float r = length(pRel);
+        minR = min(minR, r);
+
+        if (r < rH * 1.01) {
+          swallowed = true;
+          break;
+        }
+
+        // 高效逃逸判定: 远离黑洞且朝外飞行立即退出
+        if (r > 26.0 * M && dot(pRel, v) > 0.0) {
+          break;
+        }
+        if (r > 42.0 * M) {
+          break;
+        }
+
+        // 自适应积分步长 (吸积盘区域动态细化)
+        float h;
+        if (r < 3.5 * M) {
+          h = max(0.016, 0.012 * r);
+        } else if (r < 12.0 * M) {
+          h = 0.045 + 0.012 * (r - 3.5 * M);
+        } else {
+          h = min(0.35, 0.035 * r);
+        }
+
+        // 吸积盘几何体内部高精度加密步长 (Sub-stepping)
+        if (abs(pRel.y) < 0.65 * M && r >= rI * 0.8 && r <= rO * 1.15) {
+          h = min(h, 0.055 * M);
+        }
+
+        // 伴星撕裂流与伴星天体加密步长 (TDE Sub-stepping - 消除割裂与百叶窗锯齿)
+        if (uEnableTDE > 0.5 && abs(pRel.y) < 1.8 * M && r >= rI * 0.85 && r <= 15.5 * M) {
+          h = min(h, 0.048 * M);
+        }
+
+        // 吸积盘体积采样
+        float rr = length(pRel.xz);
+        float halfThick = 0.35 * M;
+        if (abs(pRel.y) < halfThick * 1.5 && rr > rI * 0.95 && rr < rO * 1.05) {
+          float dens = exp(-pow(pRel.y / max(halfThick, 0.01), 2.0)) * uDensity * pow(rI / rr, 1.2);
+          vec3 disk = diskEmission(pRel, v, M, a, rI, rO, rr);
+          volCol += disk * dens * h * 1.4;
+        }
+
+        // 邦迪-霍伊尔引力尾流采样
+        vec4 wake = sampleBondiHoyleWake(pRel, uBlackHoleVel, M);
+        if (wake.a > 0.001) {
+          volCol += wake.rgb * wake.a * h * 1.2;
+        }
+
+        // 伴星潮汐撕裂流采样 (TDE)
+        vec4 tde = sampleTDE(pRel, v, M, rI);
+        if (tde.a > 0.001) {
+          volCol += tde.rgb * tde.a * h * 1.2;
+        }
+
+        // RK2 midpoint
+        vec3 k1v = acc(pRel, v, M, a);
+        vec3 pm = p + 0.5 * h * v;
+        vec3 vm = v + 0.5 * h * k1v;
+        vec3 k2v = acc(pm - uBlackHolePos, vm, M, a);
+        vec3 k2p = vm;
+        p += h * k2p;
+        v += h * k2v;
+
+        // 引力波时空同心涟漪光环 (Luminous Ripple Crests)
+        if (uGWBurst > 0.001) {
+          float phi = atan(pRel.z, pRel.x);
+          float gwPhase = 2.4 * r - 4.5 * uTime + 2.0 * phi;
+          float waveCrest = pow(max(cos(gwPhase), 0.0), 5.0) * exp(-abs(pRel.y) / (2.0 * M));
+          float falloff = exp(-r / (10.0 * M)) / max(r * 0.2, 0.5);
+          vec3 gwCol = mix(vec3(0.2, 0.7, 1.2), vec3(0.8, 0.3, 1.4), 0.5 + 0.5 * sin(gwPhase * 0.5));
+          volCol += gwCol * waveCrest * falloff * uGWBurst * h * 2.5;
+        }
+      }
+
+      if (swallowed) {
+        return volCol;
+      }
+
+      // 未被视界捕获的光线采样深空背景与光子环
+      col = starfield(normalize(v));
+      float ring1 = exp(-abs(minR - rPh) / (0.025 * M));
+      float ring2 = exp(-abs(minR - rPh * 0.86) / (0.018 * M));
+      vec3 ringCol = vec3(1.0, 0.85, 0.55);
+      col += ringCol * ring1 * 1.2 * uDensity;
+      col += vec3(0.8, 0.9, 1.0) * ring2 * 0.5 * uDensity;
+      col += volCol;
+      return col;
+    }
+
+    // ---------- Main (High-Performance Single-Pass with ACES & Bloom) ----------
+    void main() {
+      vec2 uv = (gl_FragCoord.xy - 0.5 * uResolution.xy) / uResolution.y;
+
+      // Single-pass Trace
+      vec3 col = trace(uv);
+
+      // 时空引力微色散 (Gravitational Chromatic Dispersion)
+      float edgeDispers = pow(length(uv), 2.0) * 0.038;
+      col.r *= (1.0 + edgeDispers * 1.2);
+      col.b *= (1.0 - edgeDispers * 0.8);
+
+      // ACES Filmic
+      col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
+
+      // 宽银幕变形镜头光晕 (Anamorphic Blue Flare)
+      float lum = dot(col, vec3(0.299, 0.587, 0.114));
+      float horizStreak = pow(max(lum - 0.9, 0.0), 1.8) * exp(-abs(uv.y) * 14.0);
+      col += vec3(0.22, 0.60, 1.25) * horizStreak * 0.28;
+
+      // 纯净各向同性光学辉光
+      vec3 bloom = max(col - 0.75, 0.0) * 0.45;
+      col += bloom;
+
+      // 柯达电影胶片有机微颗粒 (Kodak Vision3 Film Grain)
+      float grain = (fract(sin(dot(gl_FragCoord.xy + uTime * 45.0, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) * 0.024;
+      col += grain * clamp(1.0 - lum * 0.5, 0.0, 1.0);
+
+      // Vignette
+      col *= 1.0 - 0.25 * length(uv);
+      col = pow(col, vec3(0.85));
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `;
+
+  // ---------- Compile ----------
+  function compile(type, src) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+      console.error(gl.getShaderInfoLog(sh));
+      return null;
+    }
+    return sh;
+  }
+  const vs = compile(gl.VERTEX_SHADER, vertSrc);
+  const fs = compile(gl.FRAGMENT_SHADER, fragSrc);
+  if (!vs || !fs) {
+    document.body.innerHTML = '<div style="color:#fff;padding:40px">着色器编译失败，请查看控制台。</div>';
+    return;
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    console.error(gl.getProgramInfoLog(prog));
+    return;
+  }
+  gl.useProgram(prog);
+
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+  const aPos = gl.getAttribLocation(prog, "aPos");
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+  const U = {};
+  ["uResolution","uTime","uSpin","uMass","uTemp","uDensity","uFlow","uSteps","uPitch","uYaw","uDist","uGWBurst","uEnableWake","uEnableTDE","uBlackHolePos","uBlackHoleVel"]
+    .forEach(n => U[n] = gl.getUniformLocation(prog, n));
+
+  // Web Audio API LIGO 引力波“啁啾”合成器
+  let audioCtx = null;
+  function playChirp() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(35.0, t);
+      osc.frequency.exponentialRampToValueAtTime(620.0, t + 1.6);
+      osc.frequency.exponentialRampToValueAtTime(420.0, t + 1.8);
+      osc.frequency.setValueAtTime(20.0, t + 2.0);
+      gain.gain.setValueAtTime(0.01, t);
+      gain.gain.exponentialRampToValueAtTime(0.5, t + 1.6);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 2.0);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 2.0);
+    } catch (e) {
+      console.warn("Audio not supported or blocked", e);
+    }
+  }
+
+  // ---------- State ----------
+  const state = {
+    spin: 0.0,
+    mass: 1.0,
+    temp: 1.0,
+    dens: 1.0,
+    flow: 1.0,
+    steps: 192,
+    pitch: 30,
+    yaw: 0,
+    dist: 16.0,
+    gwBurst: 0.0,
+    cruising: false,
+    wake: false,
+    tde: false,
+    bhPos: [0.0, 0.0, 0.0],
+    bhVel: [0.0, 0.0, 1.0],
+    dragging: false,
+    lastX: 0,
+    lastY: 0,
+    diving: false
+  };
+
+  // ---------- UI ----------
+  const $ = id => document.getElementById(id);
+  const out = {
+    spin: $("spinVal"), mass: $("massVal"), temp: $("tempVal"), dens: $("densVal"),
+    flow: $("flowVal"), steps: $("stepsVal"), pitch: $("pitchVal"),
+    yaw: $("yawVal"), dist: $("distVal")
+  };
+  function bind(id, key, fmt) {
+    const el = $(id);
+    el.addEventListener("input", () => {
+      state[key] = parseFloat(el.value);
+      out[key].textContent = fmt ? fmt(state[key]) : state[key].toFixed(2);
+    });
+  }
+  bind("spin", "spin", v => v.toFixed(2));
+  bind("mass", "mass", v => v.toFixed(2));
+  bind("temp", "temp", v => v.toFixed(2));
+  bind("dens", "dens", v => v.toFixed(2));
+  bind("flow", "flow", v => v.toFixed(2));
+  bind("steps", "steps", v => v.toFixed(0));
+  bind("pitch", "pitch", v => v.toFixed(0) + "°");
+  bind("yaw", "yaw", v => v.toFixed(0) + "°");
+  bind("dist", "dist", v => v.toFixed(1));
+
+  function syncUI() {
+    $("spin").value = state.spin; out.spin.textContent = state.spin.toFixed(2);
+    $("mass").value = state.mass; out.mass.textContent = state.mass.toFixed(2);
+    $("temp").value = state.temp; out.temp.textContent = state.temp.toFixed(2);
+    $("dens").value = state.dens; out.dens.textContent = state.dens.toFixed(2);
+    $("flow").value = state.flow; out.flow.textContent = state.flow.toFixed(2);
+    $("pitch").value = state.pitch; out.pitch.textContent = state.pitch.toFixed(0) + "°";
+    $("yaw").value = state.yaw; out.yaw.textContent = state.yaw.toFixed(0) + "°";
+    $("dist").value = state.dist; out.dist.textContent = state.dist.toFixed(1);
+  }
+
+  // 著名黑洞档案切换 (Astrophysical Profiles)
+  document.querySelectorAll(".astro-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".astro-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const type = btn.getAttribute("data-astro");
+      if (type === "gargantua") {
+        state.mass = 1.3; state.spin = 0.998; state.temp = 0.6; state.dens = 1.6; state.pitch = 8; state.yaw = 0; state.dist = 14.0;
+      } else if (type === "m87") {
+        state.mass = 2.4; state.spin = 0.92; state.temp = 1.3; state.dens = 1.8; state.pitch = 35; state.yaw = 45; state.dist = 22.0;
+      } else if (type === "sgra") {
+        state.mass = 1.0; state.spin = 0.65; state.temp = 1.5; state.dens = 0.9; state.pitch = 20; state.yaw = -30; state.dist = 15.0;
+      } else if (type === "micro") {
+        state.mass = 0.5; state.spin = 0.0; state.temp = 2.4; state.dens = 2.5; state.pitch = 50; state.yaw = 10; state.dist = 10.0;
+      }
+      syncUI();
+    });
+  });
+
+  $("resetView").addEventListener("click", () => {
+    state.pitch = 30; state.yaw = 0; state.dist = 16;
+    $("pitch").value = 30; $("yaw").value = 0; $("dist").value = 16;
+    out.pitch.textContent = "30°"; out.yaw.textContent = "0°"; out.dist.textContent = "16.0";
+  });
+
+  $("diveBtn").addEventListener("click", () => {
+    state.diving = !state.diving;
+    $("diveBtn").textContent = state.diving ? "停止俯冲" : "视界俯冲";
+    if (state.diving) {
+      state.gwBurst = 1.0;
+      playChirp();
+    }
+  });
+
+  // 激发 LIGO 引力波脉冲
+  if ($("gwBtn")) {
+    $("gwBtn").addEventListener("click", () => {
+      state.gwBurst = 1.0;
+      playChirp();
+    });
+  }
+
+  // 宇宙深空巡航开关
+  if ($("cruiseBtn")) {
+    $("cruiseBtn").addEventListener("click", () => {
+      state.cruising = !state.cruising;
+      $("cruiseBtn").textContent = state.cruising ? "🛑 停止巡航" : "🚀 宇宙巡航";
+      $("cruiseBtn").style.background = state.cruising ? "rgba(255, 170, 0, 0.25)" : "";
+    });
+  }
+
+  // 邦迪-霍伊尔引力尾流开关
+  if ($("wakeBtn")) {
+    $("wakeBtn").addEventListener("click", () => {
+      state.wake = !state.wake;
+      $("wakeBtn").textContent = state.wake ? "☄️ 尾流已开" : "☄️ 尾流";
+      $("wakeBtn").style.background = state.wake ? "rgba(255, 102, 51, 0.25)" : "";
+    });
+  }
+
+  // 伴星潮汐撕裂流开关
+  if ($("tdeBtn")) {
+    $("tdeBtn").addEventListener("click", () => {
+      state.tde = !state.tde;
+      $("tdeBtn").textContent = state.tde ? "🌟 撕裂已开" : "🌟 伴星撕裂";
+      $("tdeBtn").style.background = state.tde ? "rgba(255, 204, 0, 0.25)" : "";
+    });
+  }
+
+  // 4K 无损壁纸截图导出
+  $("snapBtn").addEventListener("click", () => {
+    const origW = canvas.width;
+    const origH = canvas.height;
+    canvas.width = 3840;
+    canvas.height = 2160;
+    gl.viewport(0, 0, 3840, 2160);
+    gl.uniform2f(U.uResolution, 3840, 2160);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    const data = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.download = `kerr_black_hole_4k_${Date.now()}.png`;
+    a.href = data;
+    a.click();
+    canvas.width = origW;
+    canvas.height = origH;
+    gl.viewport(0, 0, origW, origH);
+  });
+
+  // ---------- Mouse / touch ----------
+  canvas.addEventListener("mousedown", e => {
+    state.dragging = true;
+    state.lastX = e.clientX;
+    state.lastY = e.clientY;
+  });
+  window.addEventListener("mousemove", e => {
+    if (!state.dragging) return;
+    const dx = e.clientX - state.lastX;
+    const dy = e.clientY - state.lastY;
+    state.lastX = e.clientX;
+    state.lastY = e.clientY;
+    state.yaw = (state.yaw + dx * 0.25 + 360) % 360;
+    if (state.yaw > 180) state.yaw -= 360;
+    state.pitch = Math.max(-85, Math.min(85, state.pitch + dy * 0.25));
+    $("pitch").value = state.pitch; $("yaw").value = state.yaw;
+    out.pitch.textContent = state.pitch.toFixed(0) + "°";
+    out.yaw.textContent = state.yaw.toFixed(0) + "°";
+  });
+  window.addEventListener("mouseup", () => state.dragging = false);
+  window.addEventListener("blur", () => state.dragging = false);
+  canvas.addEventListener("wheel", e => {
+    e.preventDefault();
+    state.dist = Math.max(3.5, Math.min(40, state.dist + e.deltaY * 0.015));
+    $("dist").value = state.dist;
+    out.dist.textContent = state.dist.toFixed(1);
+  }, { passive: false });
+
+  canvas.addEventListener("touchstart", e => {
+    if (e.touches.length === 1) {
+      state.dragging = true;
+      state.lastX = e.touches[0].clientX;
+      state.lastY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+  canvas.addEventListener("touchmove", e => {
+    if (!state.dragging || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - state.lastX;
+    const dy = e.touches[0].clientY - state.lastY;
+    state.lastX = e.touches[0].clientX;
+    state.lastY = e.touches[0].clientY;
+    state.yaw = (state.yaw + dx * 0.25 + 360) % 360;
+    if (state.yaw > 180) state.yaw -= 360;
+    state.pitch = Math.max(-85, Math.min(85, state.pitch + dy * 0.25));
+    $("pitch").value = state.pitch; $("yaw").value = state.yaw;
+    out.pitch.textContent = state.pitch.toFixed(0) + "°";
+    out.yaw.textContent = state.yaw.toFixed(0) + "°";
+  }, { passive: true });
+  canvas.addEventListener("touchend", () => state.dragging = false);
+
+  // ---------- Resize ----------
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const w = Math.floor(canvas.clientWidth * dpr);
+    const h = Math.floor(canvas.clientHeight * dpr);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // ---------- Telemetry / loop ----------
+  let frames = 0;
+  let fpsTime = 0;
+  let last = performance.now() / 1000;
+  let sim = 0;
+
+  function frame(now) {
+    const nowSec = now / 1000;
+    const dt = Math.min(nowSec - last, 0.1);
+    last = nowSec;
+    sim += dt;
+
+    // Dive animation
+    if (state.diving) {
+      state.dist = Math.max(3.2, state.dist - dt * 1.2);
+      $("dist").value = state.dist;
+      out.dist.textContent = state.dist.toFixed(1);
+    }
+
+    resize();
+
+    // Telemetry
+    frames++;
+    if (nowSec - fpsTime >= 0.5) {
+      $("fps").textContent = Math.round(frames / (nowSec - fpsTime));
+      frames = 0;
+      fpsTime = nowSec;
+    }
+    const M = state.mass;
+    const a = state.spin * M;
+    const rH = M + Math.sqrt(Math.max(M*M - a*a, 0));
+    const erg = 2.0 * M;
+    const gamma = 1.0 / Math.sqrt(Math.max(1 - 2*M/state.dist, 0.1));
+    $("rh").textContent = rH.toFixed(3);
+    $("erg").textContent = erg.toFixed(3);
+    $("tSpin").textContent = state.spin.toFixed(2);
+    $("tDist").textContent = (state.dist / M).toFixed(1);
+    $("gamma").textContent = gamma.toFixed(2);
+    if (state.dist < rH * 1.6) {
+      $("gamma").className = "warn";
+    } else {
+      $("gamma").className = "";
+    }
+
+    // 宇宙深空巡航轨迹与速度计算
+    if (state.cruising) {
+      const tCruise = sim * 0.35;
+      const bx = Math.sin(tCruise) * 10.5;
+      const by = Math.sin(tCruise * 0.6) * 2.2;
+      const bz = Math.cos(tCruise * 0.8) * 8.5;
+      const vx = Math.cos(tCruise) * 10.5 * 0.35;
+      const vy = Math.cos(tCruise * 0.6) * 2.2 * 0.6 * 0.35;
+      const vz = -Math.sin(tCruise * 0.8) * 8.5 * 0.8 * 0.35;
+      state.bhPos = [bx, by, bz];
+      state.bhVel = [vx, vy, vz];
+    } else {
+      state.bhPos[0] += (0.0 - state.bhPos[0]) * dt * 4.0;
+      state.bhPos[1] += (0.0 - state.bhPos[1]) * dt * 4.0;
+      state.bhPos[2] += (0.0 - state.bhPos[2]) * dt * 4.0;
+      state.bhVel[0] += (0.0 - state.bhVel[0]) * dt * 4.0;
+      state.bhVel[1] += (0.0 - state.bhVel[1]) * dt * 4.0;
+      state.bhVel[2] += (1.0 - state.bhVel[2]) * dt * 4.0;
+    }
+
+    // 引力波瞬态脉冲衰减
+    if (state.gwBurst > 0.001) {
+      state.gwBurst = Math.max(0.0, state.gwBurst - dt * 0.45);
+    }
+
+    gl.uniform2f(U.uResolution, canvas.width, canvas.height);
+    gl.uniform1f(U.uTime, sim);
+    gl.uniform1f(U.uSpin, state.spin);
+    gl.uniform1f(U.uMass, state.mass);
+    gl.uniform1f(U.uTemp, state.temp);
+    gl.uniform1f(U.uDensity, state.dens);
+    gl.uniform1f(U.uFlow, state.flow);
+    gl.uniform1f(U.uSteps, state.steps);
+    gl.uniform1f(U.uPitch, state.pitch);
+    gl.uniform1f(U.uYaw, state.yaw);
+    gl.uniform1f(U.uDist, state.dist);
+    gl.uniform1f(U.uGWBurst, state.gwBurst);
+    gl.uniform1f(U.uEnableWake, state.wake ? 1.0 : 0.0);
+    gl.uniform1f(U.uEnableTDE, state.tde ? 1.0 : 0.0);
+    gl.uniform3f(U.uBlackHolePos, state.bhPos[0], state.bhPos[1], state.bhPos[2]);
+    gl.uniform3f(U.uBlackHoleVel, state.bhVel[0], state.bhVel[1], state.bhVel[2]);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
