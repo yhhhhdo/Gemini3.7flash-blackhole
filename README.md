@@ -5,6 +5,10 @@
 [![AI-Collab](https://img.shields.io/badge/AI%20Collaborator-Gemini%203.7%20Flash%20%26%20DeepSeek-8A2BE2?style=flat-square)](https://github.com/yhhhhdo/Gemini3.7flash-blackhole)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
+<p align="center">
+  <img src="preview.png" alt="Kerr Relativistic Black Hole Simulation 4K Preview" width="100%">
+</p>
+
 基于 **广义相对论克尔时空度规（Kerr Metric）** 与 **全屏 GPU 光线步进（GLSL Raymarching）** 构建的交互式相对论黑洞天体物理仿真系统。
 
 > 🌐 **在线体验网址 (Live Demo)**：
