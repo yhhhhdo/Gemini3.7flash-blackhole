@@ -8,7 +8,7 @@
 基于 **广义相对论克尔时空度规（Kerr Metric）** 与 **全屏 GPU 光线步进（GLSL Raymarching）** 构建的交互式相对论黑洞天体物理仿真系统。
 
 > 🌐 **在线体验网址 (Live Demo)**：
-> - **Gemini 3.7flash**：[https://yhhhhdo.github.io/Gemini3.7flash-blackhole/](https://yhhhhdo.github.io/Gemini3.7flash-blackhole/)
+> - **主项目Gemini 3.7flash**：[https://yhhhhdo.github.io/Gemini3.7flash-blackhole/](https://yhhhhdo.github.io/Gemini3.7flash-blackhole/)
 > - **Deepseek v4flash生成初版，后续由Gemini 3.7flash修改**：[https://yhhhhdo.github.io/Gemini3.7flash-blackhole/blackhole_kerr.html](https://yhhhhdo.github.io/Gemini3.7flash-blackhole/blackhole_kerr.html)
 
 ---
@@ -19,8 +19,8 @@
 
 ```mermaid
 graph TD
-    A["🌌 用户天体物理构想 (User's Vision)"] --> B["👑 主项目旗舰版 (index.html + src/)"]
-    A --> C["⚡ 单文件独立便携版 (blackhole_kerr.html)"]
+    A["🌌 用户天体物理构想 (User's Vision)"] --> B["👑 主项目 (index.html + src/)"]
+    A --> C["⚡ Ds与Gemini合作完成 (blackhole_kerr.html)"]
     
     B --> B1["创作伙伴: Gemini 3.7 Flash (全流程从零架构)"]
     B --> B2["特性: 模块化 Three.js + 航空 HUD + 引力波音效 + 多尺度体积撕裂流"]
