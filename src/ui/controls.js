@@ -17,9 +17,9 @@ export class UIManager {
       enableDoppler: true,
       enableTDE: false,
       enableGrid: false,
-      enableHotspot: false,
+      enableHotspot: true,
       enableGW: false,
-      enableCruise: false,
+      enableCruise: true,
       enableWake: false,
       enableBloom: true,
       enableCinematicFlare: true,
@@ -27,15 +27,15 @@ export class UIManager {
       enableDispersion: true,
 
       // 参数滑块
-      spin: 0.301,
+      spin: 0.999,
       mass: 0.50,
       temperature: 3000,
       density: 0.20,
       jetPower: 4.00,
-      timeRate: 2.00,
+      timeRate: 0.90,
       cruiseSpeed: 1.00,
       wakePower: 1.50,
-      quality: 4, // 1: Std, 2: High, 3: Ultra, 4: Cinema 4K, 5: IMAX 8K
+      quality: 5, // 1: Std, 2: High, 3: Ultra, 4: Cinema 4K, 5: IMAX 8K
     };
 
     this.initElements();
@@ -408,30 +408,33 @@ export class UIManager {
   resetToDefaults() {
     this.state = {
       enableDisk: true,
-      enableJets: true,
+      enableJets: false,
       enableLensing: true,
       enableDoppler: true,
       enableTDE: false,
       enableGrid: false,
       enableHotspot: true,
       enableGW: false,
-      enableCruise: false,
+      enableCruise: true,
       enableWake: false,
       enableBloom: true,
-      spin: 0.301,
+      enableCinematicFlare: true,
+      flarePower: 1.00,
+      enableDispersion: true,
+      spin: 0.999,
       mass: 0.50,
       temperature: 3000,
       density: 0.20,
       jetPower: 4.00,
-      timeRate: 2.00,
+      timeRate: 0.90,
       cruiseSpeed: 1.00,
       wakePower: 1.50,
-      quality: 4,
+      quality: 5,
     };
 
     this.syncControlsFromState();
     this.sliders.quality.input.value = this.state.quality;
-    this.sliders.quality.disp.textContent = '电影 4K (250)';
+    this.sliders.quality.disp.textContent = 'IMAX 8K (380 步)';
 
     this.app.onParamChange();
     this.presetButtons.forEach(b => b.classList.remove('active'));

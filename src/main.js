@@ -110,14 +110,14 @@ class KerrBlackHoleEngine {
       uTime: { value: 0.0 },
 
       uMass: { value: 0.50 },
-      uSpin: { value: 0.301 },
+      uSpin: { value: 0.999 * 0.50 },
       uTemperature: { value: 3000.0 },
       uDensity: { value: 0.20 },
       uJetPower: { value: 4.00 },
-      uQualitySteps: { value: 4 },
+      uQualitySteps: { value: 5 },
 
       uEnableDisk: { value: true },
-      uEnableJets: { value: true },
+      uEnableJets: { value: false },
       uEnableLensing: { value: true },
       uEnableDoppler: { value: true },
       uEnableTDE: { value: false },

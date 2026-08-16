@@ -181,7 +181,7 @@
 
           <!-- 吸积盘相对论热斑开关 -->
           <label class="switch-card" for="toggle-hotspot">
-            <input type="checkbox" id="toggle-hotspot">
+            <input type="checkbox" id="toggle-hotspot" checked>
             <div class="switch-box">
               <span class="switch-icon">🔥</span>
               <div class="switch-info">
@@ -220,7 +220,7 @@
 
           <!-- 流浪黑洞宇宙巡航模式 -->
           <label class="switch-card" for="toggle-cruise">
-            <input type="checkbox" id="toggle-cruise">
+            <input type="checkbox" id="toggle-cruise" checked>
             <div class="switch-box">
               <span class="switch-icon">🚀</span>
               <div class="switch-info">
@@ -327,9 +327,9 @@
         <div class="slider-control">
           <div class="slider-header">
             <span class="slider-label">自旋角动量 (Spin $a/M$)</span>
-            <span class="slider-value" id="disp-spin">+0.301</span>
+            <span class="slider-value" id="disp-spin">+0.999</span>
           </div>
-          <input type="range" id="param-spin" min="-0.999" max="0.999" step="0.001" value="0.301">
+          <input type="range" id="param-spin" min="-0.999" max="0.999" step="0.001" value="0.999">
           <div class="slider-ticks">
             <span>-0.99 (逆行)</span>
             <span>0.00 (史瓦西)</span>
@@ -377,9 +377,9 @@
         <div class="slider-control">
           <div class="slider-header">
             <span class="slider-label">时空演化速率 (Time Rate)</span>
-            <span class="slider-value" id="disp-time-rate">2.00x</span>
+            <span class="slider-value" id="disp-time-rate">0.90x</span>
           </div>
-          <input type="range" id="param-time-rate" min="0.0" max="3.0" step="0.1" value="2.00">
+          <input type="range" id="param-time-rate" min="0.0" max="3.0" step="0.1" value="0.90">
         </div>
 
         <!-- 巡航漂移速度 -->
@@ -404,9 +404,9 @@
         <div class="slider-control">
           <div class="slider-header">
             <span class="slider-label">光线步进采样精度 (Raymarch Quality)</span>
-            <span class="slider-value" id="disp-quality">电影 4K (260)</span>
+            <span class="slider-value" id="disp-quality">IMAX 8K (380 步)</span>
           </div>
-          <input type="range" id="param-quality" min="1" max="5" step="1" value="4">
+          <input type="range" id="param-quality" min="1" max="5" step="1" value="5">
           <div class="slider-ticks">
             <span>标准</span>
             <span>高画质</span>
