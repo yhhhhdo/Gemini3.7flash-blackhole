@@ -8,8 +8,8 @@
 基于 **广义相对论克尔时空度规（Kerr Metric）** 与 **全屏 GPU 光线步进（GLSL Raymarching）** 构建的交互式相对论黑洞天体物理仿真系统。
 
 > 🌐 **在线体验网址 (Live Demo)**：
-> - **主项目旗舰版（推荐）**：[https://yhhhhdo.github.io/Gemini3.7flash-blackhole/](https://yhhhhdo.github.io/Gemini3.7flash-blackhole/)
-> - **单文件独立便携版**：[https://yhhhhdo.github.io/Gemini3.7flash-blackhole/blackhole_kerr.html](https://yhhhhdo.github.io/Gemini3.7flash-blackhole/blackhole_kerr.html)
+> - **Gemini 3.7flash**：[https://yhhhhdo.github.io/Gemini3.7flash-blackhole/](https://yhhhhdo.github.io/Gemini3.7flash-blackhole/)
+> - **Deepseek v4flash生成初版，后续由Gemini 3.7flash修改**：[https://yhhhhdo.github.io/Gemini3.7flash-blackhole/blackhole_kerr.html](https://yhhhhdo.github.io/Gemini3.7flash-blackhole/blackhole_kerr.html)
 
 ---
 
