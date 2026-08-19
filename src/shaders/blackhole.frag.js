@@ -143,10 +143,10 @@ float fbm2D(vec2 p) {
 }
 
 // ==========================================================================
-// 普朗克黑体辐射色温映射
+// 普朗克黑体辐射色温映射 (1000 K ~ 50000 K 广色域黑体光谱)
 // ==========================================================================
 vec3 blackbodyColor(float kelvin) {
-  float t = clamp(kelvin, 1000.0, 40000.0) / 100.0;
+  float t = clamp(kelvin, 1000.0, 50000.0) / 100.0;
   float r, g, b;
 
   if (t <= 66.0) {
@@ -246,10 +246,15 @@ vec4 evaluateDiskPoint(vec3 pos, vec3 rayDir, float M, float a, float isco, floa
   float r = length(pos.xz);
   if (r < isco * 0.98 || r > r_out * 1.02) return vec4(0.0);
 
-  // 1. Novikov-Thorne 相对论温度分布 (高能白炽基准)
-  float tempScale = (uTemperature / 3000.0);
-  float T = 38000.0 * tempScale * pow(isco / r, 0.5);
-  vec3 baseColor = blackbodyColor(T);
+  // 1. Novikov-Thorne 真实相对论温度分布 (随半径向外连续降温)
+  // 当 uTemperature = 3000K 时: 内圈 ISCO 达 ~4200K (暖金橙)，外圈降至 ~1800K (深暗红)
+  // 当 uTemperature = 6500K 时: 内圈 ISCO 达 ~9100K (天狼星白)，外圈降至 ~3800K (琥珀金)
+  // 当 uTemperature = 15000K 时: 内圈 ISCO 达 ~21000K (电光冰蓝)，外圈降至 ~9000K (纯白)
+  float localTemp = uTemperature * 1.40 * pow(isco / r, 0.60);
+  vec3 baseColor = blackbodyColor(localTemp);
+
+  // 辐射通量与温度正向物理耦合
+  float radiantBoost = sqrt(clamp(uTemperature / 3000.0, 0.6, 3.5));
 
   // 2. 相对论开普勒轨道速度与多普勒频移 (显著区分向相与背相侧)
   float betaMag = sqrt(M / r) / max(1.0 + a * sqrt(M / (r * r * r)), 0.1);
@@ -296,7 +301,7 @@ vec4 evaluateDiskPoint(vec3 pos, vec3 rayDir, float M, float a, float isco, floa
   // 8. 相对论超高能内圈能量聚集 (r^-1.2 陡峭激波衰减，营造炽热白光 ISCO 内环)
   float radialEnergyDensity = pow(isco / r, 1.2);
 
-  vec3 emitColor = baseColor * intensity * pattern * uDensity * radialEnergyDensity * edgeMask;
+  vec3 emitColor = baseColor * intensity * pattern * uDensity * radialEnergyDensity * radiantBoost * edgeMask;
 
   // 9. 吸积盘相对论动态热斑 (Relativistic Orbiting Hot Spot)
   if (uEnableHotspot) {
