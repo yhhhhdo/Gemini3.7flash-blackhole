@@ -108,9 +108,38 @@ float snoise(vec3 v) {
   return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
 }
 
-// 快速 2 阶 FBM 湍流
+// 快速 2 阶 FBM 湍流 (用于深空天体)
 float fbmFast(vec3 p) {
   return 0.65 * snoise(p) + 0.35 * snoise(p * 2.1 + vec3(1.2, 0.4, 2.3));
+}
+
+// 纯净极坐标 2D 噪点与分形布朗运动 (用于超薄丝绸吸积盘与流线)
+float hash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+float noise2D(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = hash12(i);
+  float b = hash12(i + vec2(1.0, 0.0));
+  float c = hash12(i + vec2(0.0, 1.0));
+  float d = hash12(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+float fbm2D(vec2 p) {
+  float v = 0.0;
+  float amp = 0.5;
+  for (int i = 0; i < 4; i++) {
+    v += amp * noise2D(p);
+    p *= 2.03;
+    amp *= 0.5;
+  }
+  return v;
 }
 
 // ==========================================================================
@@ -134,8 +163,7 @@ vec3 blackbodyColor(float kelvin) {
     b = 255.0;
   }
 
-  vec3 col = clamp(vec3(r, g, b) / 255.0, 0.0, 1.0);
-  return pow(col, vec3(2.2));
+  return clamp(vec3(r, g, b) / 255.0, 0.0, 1.0);
 }
 
 // ==========================================================================
@@ -212,17 +240,18 @@ float getISCO(float a, float M) {
 }
 
 // ==========================================================================
-// 相对论吸积盘采样 (High-Definition Silky Interstellar Accretion Disk)
+// 相对论吸积盘采样 (Razor-Thin Silky Interstellar Accretion Disk)
 // ==========================================================================
 vec4 evaluateDiskPoint(vec3 pos, vec3 rayDir, float M, float a, float isco, float r_out) {
   float r = length(pos.xz);
   if (r < isco * 0.98 || r > r_out * 1.02) return vec4(0.0);
 
-  // 1. Novikov-Thorne 温度分布
-  float T = 38000.0 * (uTemperature / 8500.0) * pow(isco / r, 0.5);
+  // 1. Novikov-Thorne 相对论温度分布 (高能白炽基准)
+  float tempScale = (uTemperature / 3000.0);
+  float T = 38000.0 * tempScale * pow(isco / r, 0.5);
   vec3 baseColor = blackbodyColor(T);
 
-  // 2. 相对论开普勒轨道速度与多普勒频移
+  // 2. 相对论开普勒轨道速度与多普勒频移 (显著区分向相与背相侧)
   float betaMag = sqrt(M / r) / max(1.0 + a * sqrt(M / (r * r * r)), 0.1);
   betaMag = clamp(betaMag, 0.0, 0.90);
   
@@ -240,37 +269,36 @@ vec4 evaluateDiskPoint(vec3 pos, vec3 rayDir, float M, float a, float isco, floa
     intensity = gravRed;
   }
 
-  // 4. 真实相对论差动旋转 (Differential Keplerian Flow - 内圈极速，外圈从容)
+  // 4. 真实相对论差动旋转 (Differential Keplerian Flow - 内圈光速飞旋，外圈从容)
   float omega = (sqrt(M) / (pow(r, 1.5) + a * sqrt(M))) * spinSign;
   float phi = atan(pos.z, pos.x);
   float shearPhase = phi - omega * uTime * 2.2;
 
-  // 极坐标开普勒微结构扰动 (微湍流打破单一螺旋规律感)
-  float turb = fbmFast(vec3(r * cos(shearPhase) * 0.8, pos.y * 3.5, r * sin(shearPhase) * 0.8));
+  // 5. 纯净极坐标 2D 开普勒丝绸微流线 (彻底消除 3D 垂直厚度导致的台风/积雨云雾感)
+  float turb = fbm2D(vec2(r * cos(shearPhase) * 0.8, r * sin(shearPhase) * 0.8));
   float logR_distorted = log(r) * 20.0 + turb * 1.8;
 
-  // 超细腻复合多谐波同心流线 (Multi-harmonic Filaments)
+  // 6. 超细腻复合多谐波同心流线 (Ultra-dense Multi-harmonic Filaments)
   float s1 = sin(shearPhase * 8.0 + logR_distorted);
   float s2 = sin(shearPhase * 18.0 - logR_distorted * 1.5 + 1.3);
   float s3 = sin(shearPhase * 36.0 + logR_distorted * 2.6 + 2.7);
 
-  // 磁流体动力学 (MHD Dynamo) 磁力线螺旋编织绳 (MRI Braided Magnetic Cords)
-  float mhdBraid = sin(shearPhase * 3.0 + r * 5.5 - uTime * 1.8) * cos(shearPhase * 12.0 - logR_distorted * 0.8);
-  float mhdGlow = pow(max(mhdBraid, 0.0), 3.0) * exp(-abs(pos.y) / (0.15 * M));
-
-  float streak = 0.45 * s1 + 0.30 * s2 + 0.15 * s3 + 0.20 * mhdGlow;
+  float streak = 0.50 * s1 + 0.32 * s2 + 0.18 * s3;
   streak = 0.5 + 0.5 * streak;
 
-  float pattern = 0.55 + 0.22 * turb + 0.48 * pow(streak, 1.4);
+  float pattern = 0.55 + 0.25 * turb + 0.45 * pow(streak, 1.4);
 
-  // 5. 边缘平滑羽化 (严禁硬截断与外延虚假残影)
-  float outerFade = smoothstep(r_out, r_out * 0.72, r);
-  float innerFade = smoothstep(isco * 0.98, isco * 1.08, r);
+  // 7. 边缘平滑羽化 (消除硬截断阶梯)
+  float outerFade = smoothstep(r_out, r_out * 0.70, r);
+  float innerFade = smoothstep(isco * 0.98, isco * 1.10, r);
   float edgeMask = outerFade * innerFade;
 
-  vec3 emitColor = baseColor * intensity * pattern * uDensity * edgeMask;
+  // 8. 相对论超高能内圈能量聚集 (r^-1.2 陡峭激波衰减，营造炽热白光 ISCO 内环)
+  float radialEnergyDensity = pow(isco / r, 1.2);
 
-  // 6. 吸积盘相对论动态热斑 (Relativistic Orbiting Hot Spot)
+  vec3 emitColor = baseColor * intensity * pattern * uDensity * radialEnergyDensity * edgeMask;
+
+  // 9. 吸积盘相对论动态热斑 (Relativistic Orbiting Hot Spot)
   if (uEnableHotspot) {
     float r_spot = isco * 1.35;
     float omega_spot = (sqrt(M) / (pow(r_spot, 1.5) + a * sqrt(M))) * spinSign;
@@ -579,9 +607,9 @@ void main() {
     // 外围深空大步长，保证远距离(d=120)能用少量步数逼近黑洞
     ds = min(ds, max(0.38 * M, 0.05 * r));
 
-    // 吸积盘几何体立体流形高精度加密步长 (Sub-stepping - 完整覆盖外缘膨胀区)
-    if (uEnableDisk && abs(relP.y) < (0.35 * M + 0.05 * r) && r >= isco * 0.85 && r <= (r_out * 1.15)) {
-      float diskDS = (uQualitySteps >= 4) ? 0.036 * M : 0.050 * M;
+    // 吸积盘几何体超薄流形高精度加密步长 (Sub-stepping - 紧密贴合刀锋吸积盘平面)
+    if (uEnableDisk && abs(relP.y) < (0.12 * M) && r >= isco * 0.85 && r <= (r_out * 1.15)) {
+      float diskDS = (uQualitySteps >= 4) ? 0.016 * M : 0.028 * M;
       ds = min(ds, diskDS);
     }
 
@@ -614,15 +642,15 @@ void main() {
       pos += dir * ds;
     }
 
-    // 5. 相对论吸积盘高动态纯净辐射积分 (清晰通透、彻底告别雾感与阶梯走样)
+    // 5. 相对论吸积盘高动态纯净辐射积分 (刀锋级极薄吸积盘，彻底消灭台风云雾感)
     if (uEnableDisk) {
       float rr = length(relP.xz);
       if (rr >= isco * 0.95 && rr <= r_out * 1.05) {
-        float vHeight = 0.26 * M * pow(rr / isco, 0.3);
-        float vertDens = exp(-pow(relP.y / max(vHeight, 0.01), 2.0));
-        if (vertDens > 0.001) {
+        float halfThick = 0.055 * M;
+        if (abs(relP.y) < halfThick * 2.2) {
+          float vertDens = exp(-pow(relP.y / max(halfThick, 0.005), 2.0));
           vec4 diskSample = evaluateDiskPoint(relP, dir, M, a, isco, r_out);
-          accumColor += diskSample.rgb * vertDens * ds * 1.45;
+          accumColor += diskSample.rgb * vertDens * ds * 2.8;
         }
       }
     }
