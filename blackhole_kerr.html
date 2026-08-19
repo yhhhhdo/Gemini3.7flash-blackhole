@@ -165,46 +165,46 @@
   <div class="sub">广义相对论光线步进 · RK2 · 卡冈图雅风格</div>
 
   <div class="control">
-    <label>黑洞自旋 a* <output id="spinVal">0.00</output></label>
-    <input type="range" id="spin" min="-0.999" max="0.999" step="0.001" value="0.0">
+    <label>黑洞自旋 a* <output id="spinVal">1.00</output></label>
+    <input type="range" id="spin" min="-0.999" max="0.999" step="0.001" value="0.999">
   </div>
   <div class="control">
-    <label>黑洞质量 M <output id="massVal">1.00</output></label>
-    <input type="range" id="mass" min="0.5" max="3.0" step="0.01" value="1.0">
+    <label>黑洞质量 M <output id="massVal">0.50</output></label>
+    <input type="range" id="mass" min="0.5" max="3.0" step="0.01" value="0.50">
   </div>
   <div class="control">
-    <label>吸积盘温度 <output id="tempVal">1.00</output></label>
-    <input type="range" id="temp" min="0.3" max="2.5" step="0.01" value="1.0">
+    <label>吸积盘温度 <output id="tempVal">0.30</output></label>
+    <input type="range" id="temp" min="0.3" max="2.5" step="0.01" value="0.30">
   </div>
   <div class="control">
-    <label>等离子体密度 <output id="densVal">1.00</output></label>
-    <input type="range" id="dens" min="0.2" max="3.0" step="0.01" value="1.0">
+    <label>等离子体密度 <output id="densVal">0.72</output></label>
+    <input type="range" id="dens" min="0.2" max="3.0" step="0.01" value="0.72">
   </div>
   <div class="control">
     <label>模拟流速 <output id="flowVal">1.00</output></label>
-    <input type="range" id="flow" min="0.0" max="3.0" step="0.01" value="1.0">
+    <input type="range" id="flow" min="0.0" max="3.0" step="0.01" value="1.00">
   </div>
   <div class="control">
-    <label>画质步数 <output id="stepsVal">192</output></label>
-    <input type="range" id="steps" min="64" max="512" step="32" value="192">
+    <label>画质步数 <output id="stepsVal">512</output></label>
+    <input type="range" id="steps" min="64" max="512" step="32" value="512">
   </div>
   <div class="control">
-    <label>视角俯仰 <output id="pitchVal">30°</output></label>
-    <input type="range" id="pitch" min="-85" max="85" step="1" value="30">
+    <label>视角俯仰 <output id="pitchVal">12°</output></label>
+    <input type="range" id="pitch" min="-85" max="85" step="1" value="12">
   </div>
   <div class="control">
-    <label>视角方位 <output id="yawVal">0°</output></label>
-    <input type="range" id="yaw" min="-180" max="180" step="1" value="0">
+    <label>视角方位 <output id="yawVal">24°</output></label>
+    <input type="range" id="yaw" min="-180" max="180" step="1" value="24">
   </div>
   <div class="control">
-    <label>观察距离 <output id="distVal">16.0</output></label>
-    <input type="range" id="dist" min="4.0" max="120" step="0.1" value="16.0">
+    <label>观察距离 <output id="distVal">21.5</output></label>
+    <input type="range" id="dist" min="4.0" max="120" step="0.1" value="21.5">
   </div>
 
   <div class="control" style="margin-top: 14px;">
     <label>著名黑洞档案</label>
     <div class="btn-row">
-      <button class="btn astro-btn active" data-astro="gargantua" style="font-size: 11px;">卡冈图雅</button>
+      <button class="btn astro-btn" data-astro="gargantua" style="font-size: 11px;">卡冈图雅</button>
       <button class="btn astro-btn" data-astro="m87" style="font-size: 11px;">M87*</button>
       <button class="btn astro-btn" data-astro="sgra" style="font-size: 11px;">人马座 A*</button>
       <button class="btn astro-btn" data-astro="micro" style="font-size: 11px;">微型黑洞</button>
@@ -218,7 +218,7 @@
     <button class="btn" id="gwBtn" style="color: #00e5ff;" title="触发 LIGO 引力波时空涟漪与啁啾音效">🌊 引力波</button>
   </div>
   <div class="btn-row" style="margin-top: 6px;">
-    <button class="btn" id="cruiseBtn" style="color: #ffaa00;" title="启动流浪黑洞宇宙深空巡航">🚀 宇宙巡航</button>
+    <button class="btn" id="cruiseBtn" style="color: #ffaa00; background: rgba(255, 170, 0, 0.25);" title="启动流浪黑洞宇宙深空巡航">🛑 停止巡航</button>
     <button class="btn" id="wakeBtn" style="color: #ff6633;" title="开启邦迪-霍伊尔引力激波尾流">☄️ 尾流</button>
     <button class="btn" id="tdeBtn" style="color: #ffcc00;" title="切换伴星潮汐撕裂吸积流">🌟 伴星撕裂</button>
   </div>
@@ -783,17 +783,17 @@
 
   // ---------- State ----------
   const state = {
-    spin: 0.0,
-    mass: 1.0,
-    temp: 1.0,
-    dens: 1.0,
-    flow: 1.0,
-    steps: 192,
-    pitch: 30,
-    yaw: 0,
-    dist: 16.0,
+    spin: 0.999,
+    mass: 0.50,
+    temp: 0.30,
+    dens: 0.72,
+    flow: 1.00,
+    steps: 512,
+    pitch: 12,
+    yaw: 24,
+    dist: 21.5,
     gwBurst: 0.0,
-    cruising: false,
+    cruising: true,
     wake: false,
     tde: false,
     bhPos: [0.0, 0.0, 0.0],
@@ -834,6 +834,7 @@
     $("temp").value = state.temp; out.temp.textContent = state.temp.toFixed(2);
     $("dens").value = state.dens; out.dens.textContent = state.dens.toFixed(2);
     $("flow").value = state.flow; out.flow.textContent = state.flow.toFixed(2);
+    $("steps").value = state.steps; out.steps.textContent = state.steps.toFixed(0);
     $("pitch").value = state.pitch; out.pitch.textContent = state.pitch.toFixed(0) + "°";
     $("yaw").value = state.yaw; out.yaw.textContent = state.yaw.toFixed(0) + "°";
     $("dist").value = state.dist; out.dist.textContent = state.dist.toFixed(1);
@@ -859,9 +860,9 @@
   });
 
   $("resetView").addEventListener("click", () => {
-    state.pitch = 30; state.yaw = 0; state.dist = 16;
-    $("pitch").value = 30; $("yaw").value = 0; $("dist").value = 16;
-    out.pitch.textContent = "30°"; out.yaw.textContent = "0°"; out.dist.textContent = "16.0";
+    state.pitch = 12; state.yaw = 24; state.dist = 21.5;
+    $("pitch").value = 12; $("yaw").value = 24; $("dist").value = 21.5;
+    out.pitch.textContent = "12°"; out.yaw.textContent = "24°"; out.dist.textContent = "21.5";
   });
 
   $("diveBtn").addEventListener("click", () => {
