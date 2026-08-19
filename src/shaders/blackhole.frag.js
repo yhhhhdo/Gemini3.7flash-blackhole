@@ -561,7 +561,9 @@ void main() {
   float transmittance = 1.0;
   bool capturedByHorizon = false;
 
-  vec3 pos = rayPos;
+  // 屏幕空间微抖动反走样 (Sub-pixel Ray Jitter - 彻底粉碎俯视角涡扇/同心圆阶梯切片走样)
+  float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+  vec3 pos = rayPos + rayDir * (dither * 0.04 * M);
   vec3 dir = rayDir;
 
   float minR = 1000.0;
@@ -607,9 +609,9 @@ void main() {
     // 外围深空大步长，保证远距离(d=120)能用少量步数逼近黑洞
     ds = min(ds, max(0.38 * M, 0.05 * r));
 
-    // 吸积盘几何体超薄流形高精度加密步长 (Sub-stepping - 紧密贴合刀锋吸积盘平面)
-    if (uEnableDisk && abs(relP.y) < (0.12 * M) && r >= isco * 0.85 && r <= (r_out * 1.15)) {
-      float diskDS = (uQualitySteps >= 4) ? 0.016 * M : 0.028 * M;
+    // 吸积盘几何体超细微步采样 (Sub-stepping - 在距盘面 0.65M 处提前平滑减速，消灭俯视涡扇切片)
+    if (uEnableDisk && abs(relP.y) < (0.65 * M) && r >= isco * 0.85 && r <= (r_out * 1.15)) {
+      float diskDS = (uQualitySteps >= 4) ? 0.038 * M : 0.052 * M;
       ds = min(ds, diskDS);
     }
 
@@ -642,15 +644,15 @@ void main() {
       pos += dir * ds;
     }
 
-    // 5. 相对论吸积盘高动态纯净辐射积分 (刀锋级极薄吸积盘，彻底消灭台风云雾感)
+    // 5. 相对论吸积盘高动态纯净辐射积分 (物理轻薄平直圆盘，无涡扇切片、无台风膨胀)
     if (uEnableDisk) {
       float rr = length(relP.xz);
       if (rr >= isco * 0.95 && rr <= r_out * 1.05) {
-        float halfThick = 0.055 * M;
-        if (abs(relP.y) < halfThick * 2.2) {
-          float vertDens = exp(-pow(relP.y / max(halfThick, 0.005), 2.0));
+        float halfThick = 0.22 * M;
+        if (abs(relP.y) < halfThick * 1.6) {
+          float vertDens = exp(-pow(relP.y / max(halfThick, 0.01), 2.0));
           vec4 diskSample = evaluateDiskPoint(relP, dir, M, a, isco, r_out);
-          accumColor += diskSample.rgb * vertDens * ds * 2.8;
+          accumColor += diskSample.rgb * vertDens * ds * 1.45;
         }
       }
     }
