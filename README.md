@@ -8,6 +8,9 @@
 <p align="center">
   <img src="preview.png" alt="Kerr Relativistic Black Hole Simulation 4K Preview" width="100%">
 </p>
+<p align="center">
+  <img src="kerr_black_hole_4k_1787128757876.png" alt="Kerr Black Hole 4K Deep Space Cruise & Razor-Thin Disk Preview" width="100%">
+</p>
 
 基于 **广义相对论克尔时空度规（Kerr Metric）** 与 **全屏 GPU 光线步进（GLSL Raymarching）** 构建的交互式相对论黑洞天体物理仿真系统。
 
