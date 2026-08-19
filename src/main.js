@@ -72,7 +72,7 @@ class KerrBlackHoleEngine {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.06;
     this.controls.minDistance = 1.4;
-    this.controls.maxDistance = 50.0;
+    this.controls.maxDistance = 120.0;
     this.controls.rotateSpeed = 0.8;
     this.controls.zoomSpeed = 1.1;
 
