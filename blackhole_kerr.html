@@ -198,7 +198,7 @@
   </div>
   <div class="control">
     <label>观察距离 <output id="distVal">16.0</output></label>
-    <input type="range" id="dist" min="4.0" max="40" step="0.1" value="16.0">
+    <input type="range" id="dist" min="4.0" max="120" step="0.1" value="16.0">
   </div>
 
   <div class="control" style="margin-top: 14px;">
@@ -586,6 +586,10 @@
       int steps = int(uSteps);
       if (steps > MAX_STEPS) steps = MAX_STEPS; if (steps < 1) steps = 1;
 
+      // 动态计算光线逃逸半径 (随相机距离自适应扩展，避免远距离截断)
+      float startDist = length(ro - uBlackHolePos);
+      float escapeRadius = max(42.0 * M, startDist * 1.5);
+
       for (int i = 0; i < MAX_STEPS; i++) {
         if (i >= steps) break;
         vec3 pRel = p - uBlackHolePos;
@@ -597,23 +601,19 @@
           break;
         }
 
-        // 高效逃逸判定: 远离黑洞且朝外飞行立即退出
-        if (r > 26.0 * M && dot(pRel, v) > 0.0) {
-          break;
-        }
-        if (r > 42.0 * M) {
+        // 高效逃逸判定: 光线远离黑洞且朝外飞行时安全退出
+        if (r > escapeRadius && dot(pRel, v) > 0.0) {
           break;
         }
 
-        // 自适应积分步长 (吸积盘区域动态细化)
-        float h;
-        if (r < 3.5 * M) {
-          h = max(0.016, 0.012 * r);
-        } else if (r < 12.0 * M) {
-          h = 0.045 + 0.012 * (r - 3.5 * M);
-        } else {
-          h = min(0.35, 0.035 * r);
+        // 高效物理连续自适应积分步长 (消除跳变与远距离步数耗尽)
+        float h = 0.022 * M + 0.020 * r;
+        if (r < 3.2 * M) {
+          float minStep = (uSteps >= 380.0) ? 0.008 * M : 0.015 * M;
+          h = max(minStep, 0.009 * r);
         }
+        // 外围深空大步长，保证远距离能用少量步数逼近黑洞
+        h = min(h, max(0.38 * M, 0.05 * r));
 
         // 吸积盘几何体内部高精度加密步长 (Sub-stepping)
         if (abs(pRel.y) < 0.65 * M && r >= rI * 0.8 && r <= rO * 1.15) {
@@ -950,7 +950,7 @@
   window.addEventListener("blur", () => state.dragging = false);
   canvas.addEventListener("wheel", e => {
     e.preventDefault();
-    state.dist = Math.max(3.5, Math.min(40, state.dist + e.deltaY * 0.015));
+    state.dist = Math.max(3.5, Math.min(120, state.dist + e.deltaY * 0.015));
     $("dist").value = state.dist;
     out.dist.textContent = state.dist.toFixed(1);
   }, { passive: false });
