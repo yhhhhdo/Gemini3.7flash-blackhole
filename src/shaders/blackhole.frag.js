@@ -533,58 +533,41 @@ void main() {
   float transmittance = 1.0;
   bool capturedByHorizon = false;
 
-  // 广义相对论引力作用与天体外包围球解析跃迁 (Ray-Sphere Bounding Leap)
-  float R_bound = 36.0 * M;
-  vec3 relCam = rayPos - uBlackHolePos;
-  float camDist = length(relCam);
-
   vec3 pos = rayPos;
   vec3 dir = rayDir;
-  bool enterBound = true;
-
-  if (camDist > R_bound) {
-    float b = dot(relCam, rayDir);
-    float c = dot(relCam, relCam) - R_bound * R_bound;
-    float discr = b * b - c;
-    if (discr < 0.0 || b > 0.0) {
-      // 视线完全脱靶包围球，直接采样深空天球背景 (0 步极速返回)
-      enterBound = false;
-    } else {
-      // 解析瞬移光线起点至包围球表面，消除真空步长损耗与远距离截断
-      float tEnter = -b - sqrt(discr);
-      pos = rayPos + rayDir * max(tEnter - 0.05 * M, 0.0);
-    }
-  }
 
   float minR = 1000.0;
   float totalBending = 0.0;
   float minLz = 0.0;
 
-  if (enterBound) {
-    for (int step = 0; step < 390; step++) {
-      if (step >= maxSteps || transmittance < 0.005) break;
+  // 动态计算光线逃逸半径 (随相机距离自适应扩展，避免远距离截断)
+  float startDist = length(rayPos - uBlackHolePos);
+  float escapeRadius = max(42.0 * M, startDist * 1.5);
 
-      // 相对黑洞中心的局域物理坐标
-      vec3 relP = pos - uBlackHolePos;
-      float r = length(relP);
-      float r_dot_d = dot(relP, dir);
+  for (int step = 0; step < 390; step++) {
+    if (step >= maxSteps || transmittance < 0.005) break;
 
-      // 记录光线与奇点的最近掠过距离 (Periapsis / Impact Parameter)
-      if (r < minR) {
-        minR = r;
-        minLz = (relP.x * dir.z - relP.z * dir.x);
-      }
+    // 相对黑洞中心的局域物理坐标
+    vec3 relP = pos - uBlackHolePos;
+    float r = length(relP);
+    float r_dot_d = dot(relP, dir);
 
-      // 1. 检查是否坠入事件视界
-      if (r <= rPlus * 1.01) {
-        capturedByHorizon = true;
-        break;
-      }
+    // 记录光线与奇点的最近掠过距离 (Periapsis / Impact Parameter)
+    if (r < minR) {
+      minR = r;
+      minLz = (relP.x * dir.z - relP.z * dir.x);
+    }
 
-      // 2. 高效逃逸判定 (光线飞过最近点并远离黑洞引力包围球时安全退出)
-      if (r > R_bound && r_dot_d > 0.0) {
-        break;
-      }
+    // 1. 检查是否坠入事件视界
+    if (r <= rPlus * 1.01) {
+      capturedByHorizon = true;
+      break;
+    }
+
+    // 2. 高效逃逸判定 (光线飞过最近点并远离黑洞引力包围球时安全退出)
+    if (r > escapeRadius && r_dot_d > 0.0) {
+      break;
+    }
 
     // 3. 高效物理连续自适应积分步长 (彻底消除跳变断崖与扇叶/鱼鳞切片走样)
     float ds = 0.022 * M + 0.020 * r;
@@ -593,7 +576,8 @@ void main() {
       float minStep = (uQualitySteps >= 4) ? 0.008 * M : 0.015 * M;
       ds = max(minStep, 0.009 * r);
     }
-    ds = min(ds, 0.38 * M);
+    // 外围深空大步长，保证远距离(d=120)能用少量步数逼近黑洞
+    ds = min(ds, max(0.38 * M, 0.05 * r));
 
     // 吸积盘几何体立体流形高精度加密步长 (Sub-stepping - 完整覆盖外缘膨胀区)
     if (uEnableDisk && abs(relP.y) < (0.35 * M + 0.05 * r) && r >= isco * 0.85 && r <= (r_out * 1.15)) {

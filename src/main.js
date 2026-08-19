@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { quadVertexShader } from './shaders/quad.vert.js';
-import { blackHoleFragmentShader } from './shaders/blackhole.frag.js';
+import { blackHoleFragmentShader } from './shaders/blackhole.frag.js?v=7';
 import { postProcessFragmentShader } from './shaders/postprocess.js';
 import { CosmicAudioEngine } from './audio/cosmicAudio.js';
 import { UIManager } from './ui/controls.js';
