@@ -39,7 +39,7 @@ graph TD
 
 ---
 
-### 👑 版本 A：主架构旗舰版 (`index.html` + `src/`)
+### 👑 版本 A： (`index.html` + `src/`)
 
 * **诞生背景**：由 **用户（User）** 与 **Google Gemini 3.7 Flash** 深度协同、从零构建的模块化工业级天体仿真系统。
 * **核心架构**：
@@ -50,7 +50,7 @@ graph TD
   * **LIGO 引力波时空涟漪与真实物理啁啾声（Chirp Audio）合成引擎**；
   * **IMAX 8K 纳秒级光线步进**：自适应消除百叶窗切片走样，兼顾极致画质与 60 FPS 满帧性能。
 
-#### 📜 旗舰版核心创作提示词 (Gemini 3.7 Flash Prompt Heritage)
+#### 📜 核心创作提示词 (Gemini 3.7 Flash Prompt Heritage)
 ```text
 【用户第一阶段 - 引导提问】：
 创建一个黑洞，你先对我提出要求，然后我逐一回答，你再着手创作。以达到更好的效果。
@@ -65,7 +65,7 @@ graph TD
 
 ---
 
-### ⚡ 版本 B：单文件独立便携版 (`blackhole_kerr.html`)
+### ⚡ 版本 B： (`blackhole_kerr.html`)
 
 * **诞生背景**：
   * **第一阶段**：用户使用 **DeepSeek** 生成了最初的单文件 WebGL 静态着色器原型页面；
